@@ -3,17 +3,19 @@
 # 必要パッケージのインストール(最初に一回で大丈夫です。または、frasyrが更新されたら、いちおうfraysrはインストールしなおしてください）
 # install.packages("devtools")
 # install.packages("tidyverse")
+# install.packages("gridExtra")
 ## 現在ではfrasyrの開発ブランチ(dev)でのみ対応しているので、devのものをインストールしてください
 # devtools::install_github("ichimomo/frasyr@dev")
 
 # インストールしたパッケージの呼び出し
 library(tidyverse)
+library(gridExtra)
 library(frasyr)
 # devtools::load_all("../../frasyr") # ローカルフォルダのファイルからロードする場合
 
 # 科学者会議で計算：MSY管理基準値の計算
-source("1do_MSYest.r")
-#--- ここでやること
+source("1do_MSYest.r", encoding="UTF-8")
+#-- 計算内容
 #--- 1. 再生産関係のフィット => フィットの結果：res_SR_MSY
 #--- 2. 再生産関係をもとにMSY管理基準値を計算　=> 推定結果：res_MSY
 #--- その他、重要な数字には以下の名前がついています
@@ -33,8 +35,8 @@ source("1do_MSYest.r")
 #------- * 2つのグラフのまとめ：graph_all
 
 # 科学者会議で計算：推定した管理基準値で将来予測
-source("2do_future_projection.r")
-#--- やること
+source("2do_future_projection.r", encoding="UTF-8")
+#-- 計算内容
 #--- 1. currentFでの将来予測 => 将来予測結果; res_future_current
 #--- 2. HCRを用いたときの将来予測 => 将来予測結果;res_future_0.8HCR
 #--- 3. HCRを用いてβをいろいろ変えたときの将来予測行列 => 生データ; kobeII.data, サマリー; kobeII.table

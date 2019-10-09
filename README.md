@@ -18,13 +18,18 @@
 - 2do_future_projection.r : MSY管理基準値をもとに将来予測を実施したり、kobe matrixを計算したりするプログラムです。主にこの各種設定を変更します
 - res_vpa.rda : VPA結果のサンプルデータです
 
-### 3. 計算条件の設定
+### 3.   Rの立ち上げと必要ライブラリのインストール
+
+- .RDataをダブルクリックするか、0do_all.rをRstduioで開くかしてRを立ち上げます
+- 必要なライブラリ(devtools, tidyverse, frasyr)をインストールします。 インストール方法は0do_all.rにコメントアウトされた部分にかかれています。毎回インストールする必要はありませんが、frasyrの更新頻度は高いので、うまく行かない場合はfrasyrを再インストールし、Rを再起動してからまた試してください。
+
+### 4. 計算条件の設定
     
-1do_all.rと2do_future_projection.rを自分の好きなように設定します。
+1do_MSYest.rと2do_future_projection.rを編集し、計算条件の設定をします。
 
 ### 4. コードの実行
     
-設定が終わったら、0do_all.rの中身を一行づつ走らせてください。0do_all.rは4行だけのコードですが、自分の好きなように組み合わせて改良してください。
+設定が終わったら、0do_all.rの中身を一行づつ走らせてください。0do_all.rのサンプルは4行だけのコードですが、自分の好きなように組み合わせて改良してください。
 
 ```
 # 0do_all.rの中身(コメントアウト部分を除く）
@@ -38,8 +43,9 @@ source("2do_future_projection.r") # 将来予測の実施
 
 研究機関会議では、1do_MSYest.rと2do_future_projection.rの２つのファイルを使って作業することになります。研究機関会議後、データを１年追加した新しいVPA結果で将来予測を実施する場合には2do_future_projection.rを3do_future_projection.rとかいう名前でコピーして、3つめのファイルをそのときの設定にあわせて編集し、実行し、将来予測結果を得ます。資源評価結果が更新されるごとに、do_future_projectionファイルが増えていくようなしくみになります。将来予測の設定の違いなどは、フォルダの違いとして保存しておくと管理が楽だと思います。
 
+	
+- 例）資源評価結果が１年更新された場合の0do_all.r
 ```
-# 資源評価結果が１年更新された場合の0do_all.r
 library(tidyverse)
 library(frasyr)
 source("1do_MSYest.r") # MSY管理基準値の計算
@@ -47,8 +53,8 @@ source("2do_future_projection.r") # 研究機関会議での将来予測
 source("3do_future_projection.r") # 新しいVPA結果をもとにした将来予測
 ```
 
+- 例) HSとBHで比較したい場合	
 ```
-# HSとBHで比較したい場合
 library(tidyverse)
 library(frasyr)
 source("1do_MSYest-HS.r") # MSY管理基準値の計算(SRの設定をHSにする)
