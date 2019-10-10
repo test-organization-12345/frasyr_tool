@@ -697,7 +697,7 @@ g3_kobe4 <- plot_kobe_gg(res_vpa_update,
                            yscale=1.2, # y軸を最大値の何倍まで表示するか。ラベルの重なり具合を見ながら調整してください
                            HCR.label.position=c(1,1),# HCRの説明を書くラベルの位置。相対値なので位置を見ながら調整してください。
                             ylab.type="F",Fratio=Fratio)+theme_SH()
-#ggsave_SH("g3_kobe4_F.png",g3_kobe4_F)
+#ggsave_SH("g3_kobe4.png",g3_kobe4)
 
 
 # plot future projection
@@ -723,7 +723,7 @@ g3_kobe4 <- plot_kobe_gg(res_vpa_update,
 )
 #ggsave_SH_large("g4_future.png",g4_future)
 
-graph_all2 <- gridExtra::grid.arrange(g3_kobe4_F,g4_future)
+graph_all2 <- gridExtra::grid.arrange(g3_kobe4,g4_future)
 ggsave(graph_file_future,graph_all2)
 
 out.vpa(res=res_vpa_update,

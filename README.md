@@ -25,7 +25,8 @@
 
 ### 4. 計算条件の設定
     
-1do_MSYest.rと2do_future_projection.rを編集し、計算条件の設定をします。
+- 1do_MSYest.rと2do_future_projection.rを編集し、計算条件の設定をします。
+- example中には例としてres_vpa.rda(VPA結果のRオブジェクト)とres_vpa.csv(VPA結果のcsvファイル)も入っています。csvファイルから読み込む場合はres_vpa.csvの書式を参考にしてください。
 
 ### 4. コードの実行
     
