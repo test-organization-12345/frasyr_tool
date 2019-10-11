@@ -229,7 +229,10 @@ as_tibble(res_SR_MSY$pars) %>% mutate(AICc   = res_SR_MSY$AICc,
 cat("## --------------------------------------------------------\n")
 
 # 3) MSY推定のための将来予測の設定
-future_MSY_year <- as.numeric(rev(colnames(res_vpa_MSY$naa))[1])
+
+vpa_years <- colnames(res_vpa_MSY$naa)
+future_MSY_year <- vpa_years[apply(res_vpa_MSY$input$dat$caa,2,sum)>0] %>%
+    as.numeric() %>% max()
 
 if(SR_error_MSY==1){# lognormal
     if(res_SR_MSY$input$SR=="HS") SRfun_MSY <- HS.recAR
@@ -245,11 +248,14 @@ if(SR_error_MSY==1){# lognormal
                        rho=rho_MSY,
                        sd=res_SR_MSY$pars$sd,
                        bias.correction=ifelse(bias_correction_MSY==1,TRUE,FALSE),
-                       resample=FALSE,resid=res_SR_MSY$pars$resid,
+                       resample=FALSE,resid=res_SR_MSY$resid,
                        resid.year=NULL)
-    if(rho_MSY>0){
+    if(rho_MSY>0 && calc_RP_with_AR==1){
         opt_SR_MSY$resid.year <- AR_average_year_MSY
     }
+    if(rho_MSY>0 && calc_RP_with_AR==0){
+        opt_SR_MSY$resid.year <- 1
+    }        
 }
 
 if(SR_error_MSY==2){# lognormal
@@ -268,7 +274,7 @@ opt_SR_MSY$bias.correction <- ifelse(bias_correction_MSY==1,TRUE,FALSE)
 
 if(select_Fcurrent_MSY==1) Fcurrent_MSY <- res_vpa_MSY$Fc.at.age
 if(select_Fcurrent_MSY==3){
-    Fcurrent_MSY <- apply_year_colum(res_vpa$faa,target_year=Fcurrent_year_MSY)    
+    Fcurrent_MSY <- apply_year_colum(res_vpa_MSY$faa,target_year=Fcurrent_year_MSY)    
 }
 if(select_Fcurrent_MSY==4){
     Fcurrent_MSY <- convert_faa_perSPR(res_vpa_MSY,sel_year=Fsel_year_MSY,faa_year=Fcurrent_year_MSY)
