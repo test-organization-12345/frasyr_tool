@@ -16,13 +16,15 @@ warning_option <- -1
 
 #-- 2) 再生産関係のフィット
 #--- 再生産関係をあてはめる年の範囲 0: 全部の年のデータを使う, マイナスの数字: 指定された年数分、最近年データを除く, 正の数字: 指定された数字に一致する年のデータを用いる
-year_for_srfit <- 0
+year_for_srfit <- -1
 #--- 再生産関係の式 (1: HS, 2: BH, 3: RI)
 function_srfit <- 1
 #--- あてはめの方法 (1: 最小絶対値, 2: 最小二乗)
 L1L2_srfit <- 2
 #--- 自己相関の考慮 (0: なし, 1: あり)
 AR_srfit <- 0
+#--- 自己相関を計算するときに、自己相関を外側で計算する(1)か、尤度に組み込んで内側で計算する(2)か。推奨は外側(1)。
+AR_estimation <- 1
 
 #-- 3) MSY推定の設定（F一定の条件下での将来予測をもとにする）
 #--- MSY推定で用いる選択率（近年のF at age＝Fcurrentにおける選択率がそのまま将来も受け継がれるという仮定）
@@ -70,7 +72,7 @@ is_pope <- 1
 #--- 乱数のシード
 MSY_seed <- 1
 #--- MSY計算時のシミュレーション回数(1000回以上推奨)
-MSY_nsim <- 10
+MSY_nsim <- 1000
 #--- 計算した結果の簡単な図を示す（1:示す,1以外:しない）
 MSY_est_plot <- 1
 
@@ -216,6 +218,10 @@ res_SR_MSY <- fit.SR(data_SR,
                                 "L2",
                                 ("Set appropriate number (1-2) in function_L1L2_srfit")),
                 AR      = AR_srfit,
+                out.AR  = switch(AR_estimation,
+                                 TRUE,
+                                 FALSE,
+                                 "Set appropriate number (1-2) in AR_estimation"),
                 hessian = FALSE)
 
 ## print results of SR fit
