@@ -11,6 +11,10 @@ SR_file_path_MSY <- "res_SR_HSL2.rda"
 MSY_file_path <- "res_MSY_HSL2.rda"
 #--- グラフのファイル名
 graph_file_MSY <- "MSY_graph.png"
+#--- 結果をcsvファイルで出力するときのファイル名
+csv_file_MSY <- "future0.csv"
+#--- 結果の簡単なグラフをpdfファイルで出力するときのファイル名(まだちゃんとした結果は出ないです)
+pdf_file_MSY <- "future0.pdf"
 #--- 実行したときの警告を表示するかどうか (-1: 表示しない, 0: 表示する)
 warning_option <- -1
 
@@ -25,8 +29,21 @@ L1L2_srfit <- 2
 AR_srfit <- 0
 #--- 自己相関を計算するときに、自己相関を外側で計算する(1)か、尤度に組み込んで内側で計算する(2)か。推奨は外側(1)。
 AR_estimation <- 1
+#--- 再生産関係のフィットについて、細かいモデル診断をするかどうか(1:する、0: しない)
+do_diagnostics <- 1
+#---- 細かいモデル診断をする場合の設定（ファイル名など）
+#------- 細かい説明はhttps://ichimomo.github.io/future-rvpa/SRR-guidline.html
+if(do_diagnostics==1){
+    # モデル診断結果を保存するグラフ名
+    diagnostic_file <- "diagnostic.pdf"
+    # ブートストラップ推定する場合のブートストラップ回数
+    n_boot_SR <- 10
+    
+}
 
 #-- 3) MSY推定の設定（F一定の条件下での将来予測をもとにする）
+#-- MSY推定をするかどうか（1: する, 0: しない）
+do_MSY_estimation <- 0
 #--- MSY推定で用いる選択率（近年のF at age＝Fcurrentにおける選択率がそのまま将来も受け継がれるという仮定）
 #---   (1: vpaの結果の中のFc.at.ageをそのまま使う; ややこしいので廃止予定)
 #---   2: 手動でFcurrentを設定する
@@ -72,7 +89,7 @@ is_pope <- 1
 #--- 乱数のシード
 MSY_seed <- 1
 #--- MSY計算時のシミュレーション回数(1000回以上推奨)
-MSY_nsim <- 1000
+MSY_nsim <- 10
 #--- 計算した結果の簡単な図を示す（1:示す,1以外:しない）
 MSY_est_plot <- 1
 
@@ -233,6 +250,105 @@ as_tibble(res_SR_MSY$pars) %>% mutate(AICc   = res_SR_MSY$AICc,
                                       type   = res_SR_MSY$input$SR) %>%
     print()
 cat("## --------------------------------------------------------\n")
+
+# 2-1) 再生産関係のdiagnosticをする場合
+if(do_diagnostics==1){
+    pdf(diagnostic_file)
+    par(mfrow=c(2,2),mar=c(4,4,3,2))    
+    # 正規性のチェック
+    check1 <- shapiro.test(res_SR_MSY$resid)
+    check2 <- ks.test(res_SR_MSY$resid,y="pnorm")
+
+    hist(res_SR_MSY$resid,xlab="Residuals",main="Normality test",freq=FALSE)
+    X <- seq(min(res_SR_MSY$resid)*1.3,max(res_SR_MSY$resid)*1.3,length=200)
+    points(X,dnorm(X,0,res_SR_MSY$pars$sd),col=2,lwd=3,type="l")
+    mtext(text=" P value",adj=1,line=-1,lwd=2,font=2)
+    mtext(text=sprintf(" SW: %1.3f",check1$p.value),adj=1,line=-2)
+    mtext(text=sprintf(" KS: %1.3f",check2$p.value),adj=1,line=-3)
+    
+    qqnorm(res_SR_MSY$resid2,cex=2)
+    qqline(res_SR_MSY$resid2,lwd=3)
+
+    # 残差のトレンドと自己相関
+    plot(data_SR$year, res_SR_MSY$resid2,pch=16,main="",xlab="Year",ylab="Residual")
+    title("Time series of residuals")
+    abline(0,0,lty=2)
+    par(new=T)
+    scatter.smooth(data_SR$year, res_SR_MSY$resid2, lpars=list(col="red", lwd=2),ann=F,axes=FALSE)
+    ac.res <- acf(res_SR_MSY$resid2,plot=FALSE)
+    plot(ac.res,main="",lwd=3)
+    title("Auto correlation function (rho vs. lag)")    
+
+    # ブートストラップ
+    boot.res <- boot.SR(res_SR_MSY, n=n_boot_SR)
+    hist(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$a),xlab="",ylab="",main="a in bootstrap")
+    abline(v=res_SR_MSY$pars$a,col=2,lwd=3)
+    abline(v=median(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$a)),col=3,lwd=3,lty=2)
+    arrows(quantile(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$a),0.1),0,
+           quantile(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$a),0.9),0,
+           col=4,lwd=3,code=3)
+    legend("topright",
+           legend=c("Estimate","Median","CI(0.8)"),lty=1:2,col=2:4,lwd=2,ncol=1,cex=1)
+
+    hist(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$b),xlab="",ylab="",main="b in bootstrap")
+    abline(v=res_SR_MSY$pars$b,col=2,lwd=3)
+    abline(v=median(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$b)),col=3,lwd=3,lty=2)
+    arrows(quantile(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$b),0.1),0,
+           quantile(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$b),0.9),0,
+           col=4,lwd=3,code=3)
+
+    hist(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$sd),xlab="",ylab="",main="sd in bootstrap")
+    abline(v=res_SR_MSY$pars$sd,col=2,lwd=3)
+    abline(v=median(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$sd)),col=3,lwd=3,lty=2)
+    arrows(quantile(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$sd),0.1),0,
+           quantile(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$sd),0.9),0,
+           col=4,lwd=3,code=3)
+
+    if (res_SR_MSY$input$AR==1) {
+        hist(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$rho),xlab="",ylab="",main="rho")
+        abline(v=res_SR_MSY$pars$rho,col=2,lwd=3)
+        abline(v=median(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$rho)),col=3,lwd=3,lty=2)
+        arrows(quantile(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$rho),0.1),0,
+               quantile(sapply(1:length(boot.res), function(i) boot.res[[i]]$pars$rho),0.9),0,
+               col=4,lwd=3,code=3)
+    }
+
+    # SR function
+    plot(data_SR$R ~ data_SR$SSB, cex=2, type = "b",xlab="SSB",ylab="R",
+         main="Bootstrapped SR functions",ylim=c(0,max(data_SR$R)*1.3))
+    points(rev(data_SR$SSB)[1],rev(data_SR$R)[1],col=1,type="p",lwd=3,pch=16,cex=2)
+    for (i in 1:length(boot.res)) {
+        points(boot.res[[i]]$pred$SSB,boot.res[[i]]$pred$R,type="l",lwd=2,col=rgb(0,0,1,alpha=0.1))
+    }
+    points(res_SR_MSY$pred$SSB,res_SR_MSY$pred$R,col=2,type="l",lwd=3)
+
+    # ジャックナイフ
+    jack.res <- lapply(1:length(data_SR$year), function(i){
+        jack <- res_SR_MSY
+        jack$input$w[i] <- 0
+        do.call(fit.SR,jack$input)
+    })
+
+    par(mfrow=c(2,2),mar=c(4,4,2,2))
+    plot(data_SR$year,sapply(1:length(data_SR$year), function(i) jack.res[[i]]$pars$a),type="b",
+         xlab="Removed year",ylab="",main="a in jackknife",pch=19)
+    abline(res_SR_MSY$pars$a,0,lwd=3,col=2)
+
+    plot(data_SR$year,sapply(1:length(data_SR$year), function(i) jack.res[[i]]$pars$b),type="b",
+         xlab="Removed year",ylab="",main="b in jackknife",pch=19)
+    abline(res_SR_MSY$pars$b,0,lwd=3,col=2)
+
+    plot(data_SR$year,sapply(1:length(data_SR$year), function(i) jack.res[[i]]$pars$sd),type="b",
+         xlab="Removed year",ylab="",main="sd in jackknife",pch=19)
+    abline(res_SR_MSY$pars$sd,0,lwd=3,col=2)
+
+    if (res_SR_MSY$input$AR==1){
+        plot(data_SR$year,sapply(1:length(data_SR$year), function(i) jack.res[[i]]$pars$rho),type="b",
+             xlab="Removed year",ylab="",main="rho in jackknife",pch=19)
+        abline(res_SR_MSY$pars$rho,0,lwd=3,col=2)
+    }
+    dev.off()
+}
 
 # 3) MSY推定のための将来予測の設定
 
@@ -408,7 +524,8 @@ input_est_MSY <-
          )
 
 # do estimation
-res_MSY <- do.call(est.MSY,input_est_MSY)
+if(do_MSY_estimation==1){
+   res_MSY <- do.call(est.MSY,input_est_MSY)
 
 # define RP.definition for Btarget
 if(select_Btarget!=0){
@@ -453,11 +570,12 @@ cat("## print estimated RP parameters ------------------------------\n")
 cat("## --------------------------------------------------------\n")
 print(select(res_MSY$summary,-AR,-Catch.CV))
 cat("## --------------------------------------------------------\n")
-options(tibble.width=NULL)
+   options(tibble.width=NULL)
+   save(res_MSY,file=MSY_file_path)   
+}
 
 # save results
 save(res_SR_MSY,file=SR_file_path_MSY)
-save(res_MSY,file=MSY_file_path)
 cat("## results of SR parameters and reference points are saved to",
     SR_file_path_MSY,"and", MSY_file_path,"\n")
 
@@ -480,9 +598,16 @@ ggsave_SH_large <- function(...){
 }
 
 # plot graph
-refs <- list(Bmsy  =derive_RP_value(res_MSY$summary,"Btarget0")$SSB,
-             Blimit=derive_RP_value(res_MSY$summary,"Blimit0" )$SSB,
-             Bban  =derive_RP_value(res_MSY$summary,"Bban0"   )$SSB)
+{if(do_MSY_estimation==1){
+    refs <- list(Bmsy  = derive_RP_value(res_MSY$summary,"Btarget0")$SSB,
+                 Blimit= derive_RP_value(res_MSY$summary,"Blimit0" )$SSB,
+                 Bban  = derive_RP_value(res_MSY$summary,"Bban0"   )$SSB)
+}
+else{
+    refs <- list(Bmsy  = 0,
+                 Blimit= 0,
+                 Bban  = 0)    
+    }}
 
 (g1_SRplot <- SRplot_gg(res_SR_MSY,
                         xscale=1000,xlabel="千トン",
@@ -492,7 +617,8 @@ refs <- list(Bmsy  =derive_RP_value(res_MSY$summary,"Btarget0")$SSB,
                         add.info=TRUE) + theme_SH())
 #ggsave_SH(MSY_graph_SR_file,g1_SRplot)
 
-## yield curve
+## yield curve & kobe chart
+if(do_MSY_estimation==1){
 refs.plot <- dplyr::filter(res_MSY$summary,RP.definition%in%c("Btarget0","Blimit0","Bban0"))
 (g2_yield_curve <- plot_yield(res_MSY$trace,
                               refs.plot,
@@ -504,10 +630,54 @@ refs.plot <- dplyr::filter(res_MSY$summary,RP.definition%in%c("Btarget0","Blimit
                               AR_select=FALSE,
                               xlim.scale=1,ylim.scale=1.1 # x, y軸の最大値の何倍までプロットするか。ラベルやyield curveの形を見ながら適宜調整してください
                               ) + theme_SH())
-#ggsave_SH("g2_yield_curve.png",g2_yield_curve)
 
-graph_all <- gridExtra::grid.arrange(g1_SRplot,g2_yield_curve)
-ggsave(graph_file_MSY,graph_all)
+# kobe plot
+# SPR.msyを目標としたとき、それぞれのF at age by yearを何倍すればSPR.msyを達成できるか計算
+SPR.history <- get.SPR(res_vpa_MSY,
+                       target.SPR=SPR_MSY0*100,
+                       max.age=Inf,Fmax=1)$ysdata
+Fratio <- SPR.history$"F/Ftarget"
+Bratio <- colSums(res_vpa_MSY$ssb)/derive_RP_value(res_MSY$summary,"Btarget0")$SSB
+
+cat("## --------------------------------------------------------\n")
+cat("## Historical F/Fmsy & B/Bmsy values ------------\n")
+cat("## --------------------------------------------------------\n")
+kobe.ratio <- tibble(Bratio=Bratio,Fratio=Fratio) %>%
+    mutate(Bratio=round(Bratio,2),Fratio=round(Fratio,2)) %>%
+    print()
+cat("## --------------------------------------------------------\n")
+
+g3_kobe4 <- plot_kobe_gg(res_vpa_MSY,
+                           refs_base=res_MSY$summary,
+                           roll_mean=1,category=4,
+                           Btarget="Btarget0",
+                           Blow="Btarget0",                           
+                           beta=0.8, # 推奨されるβに変える
+                           refs.color=c(1,1,1),
+                           yscale=1.2, # y軸を最大値の何倍まで表示するか。ラベルの重なり具合を見ながら調整してください
+                           HCR.label.position=c(1,1),# HCRの説明を書くラベルの位置。相対値なので位置を見ながら調整してください。
+                         ylab.type="F",Fratio=Fratio)+theme_SH()
+}
+
+if(do_MSY_estimation==1){
+    graph_all <- gridExtra::grid.arrange(g1_SRplot,g2_yield_curve,g3_kobe4)
+    ggsave(graph_file_MSY,graph_all)
+}
+if(do_MSY_estimation==0){
+    graph_all <- gridExtra::grid.arrange(g1_SRplot)
+    ggsave(graph_file_MSY,graph_all)
+}
+
+out.vpa(res=res_vpa_MSY,
+        srres=res_SR_MSY,
+        msyres=(if(do_MSY_estimation==1) res_MSY else NULL),
+        fres_current=NULL,
+        fres_HCR=NULL,
+        kobeII=NULL,
+        csvname=csv_file_MSY,pdfname=pdf_file_MSY)
+
+
 
 options(warn=old.warning)
 options(tibble.width=NULL)
+

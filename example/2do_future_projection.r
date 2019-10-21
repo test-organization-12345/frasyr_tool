@@ -13,7 +13,7 @@ if(use_new_vpa_res==1){
 }
 #--- MSY推定結果（res_MSY）が保存されているファイルの名前
 MSY_file_path <- "res_MSY_HSL2A1.rda"
-#--- 将来予測結果を保存するファイルの名前（以下のオブジェクトが入っています）
+#--- 将来予測結果を保存するファイルの名前（以下のオブジェクトがリスト形式で入っています）
 #---- res_future_0.8HCR ; β=0.8の将来予測の結果
 #---- res_future_current; Fcurrentでの将来予測の結果
 #---- kobeII.table      ; kobe II matrixの表
@@ -656,6 +656,18 @@ cat("\n***** Summary results *****\n")
 save(res_future_0.8HCR,res_future_current,kobeII.table,file=future_file_path)
 cat(paste("create output file of",future_file_path,": Future simualtion results\n"))
 
+##
+theme_SH <- function(){
+    theme_bw(base_size=12) +
+    theme(panel.grid = element_blank(),
+          axis.text.x=element_text(size=11,color="black"),
+          axis.text.y=element_text(size=11,color="black"),
+          axis.line.x=element_line(size= 0.3528),
+          axis.line.y=element_line(size= 0.3528),
+          legend.position="none")
+}
+
+
 #### plot results
 # kobe plot
 # SPR.msyを目標としたとき、それぞれのF at age by yearを何倍すればSPR.msyを達成できるか計算
@@ -673,20 +685,6 @@ kobe.ratio <- tibble(Bratio=Bratio,Fratio=Fratio) %>%
     print()
 cat("## --------------------------------------------------------\n")
 
-# SPRの時系列と目標SPR
-#plot(SPR.history$perSPR,ylim=c(0,max(c(SPR.history$perSPR,SPR.msy))),type="b")
-#abline(h=SPR.msy,lty=2)
-
-theme_SH <- function(){
-    theme_bw(base_size=12) +
-    theme(panel.grid = element_blank(),
-          axis.text.x=element_text(size=11,color="black"),
-          axis.text.y=element_text(size=11,color="black"),
-          axis.line.x=element_line(size= 0.3528),
-          axis.line.y=element_line(size= 0.3528),
-          legend.position="none")
-}
-
 g3_kobe4 <- plot_kobe_gg(res_vpa_update,
                            refs_base=res_MSY$summary,
                            roll_mean=1,category=4,
@@ -697,8 +695,6 @@ g3_kobe4 <- plot_kobe_gg(res_vpa_update,
                            yscale=1.2, # y軸を最大値の何倍まで表示するか。ラベルの重なり具合を見ながら調整してください
                            HCR.label.position=c(1,1),# HCRの説明を書くラベルの位置。相対値なので位置を見ながら調整してください。
                             ylab.type="F",Fratio=Fratio)+theme_SH()
-#ggsave_SH("g3_kobe4.png",g3_kobe4)
-
 
 # plot future projection
 (g4_future <- plot_futures(res_vpa_update, #vpaの結果
