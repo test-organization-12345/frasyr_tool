@@ -12,7 +12,7 @@ if(use_new_vpa_res==1){
     vpa_file_type <- 1
 }
 #--- MSY推定結果（res_MSY）が保存されているファイルの名前
-MSY_file_path <- "res_MSY_HSL2A1.rda"
+MSY_file_path <- "res_MSY_HSL2.rda"
 #--- 将来予測結果を保存するファイルの名前（以下のオブジェクトがリスト形式で入っています）
 #---- res_future_0.8HCR ; β=0.8の将来予測の結果
 #---- res_future_current; Fcurrentでの将来予測の結果
@@ -39,17 +39,24 @@ future_nsim <- 1000
 future_est_plot <- 1
 
 #-- 生物パラメータ
-#--- 将来予測で仮定する年齢別体重(資源量計算用)の設定(1:年で指定, 2:直接指定, 3: MSY計算と同じ設定,
-#---                                            4: 資源尾数に対する回帰モデルからの予測値を使う)
-select_waa_in_future <- 3
+#--- 将来予測で仮定する年齢別体重(資源量計算用)の設定（通常は５を使う？）
+#---   (1: 年で指定, 2:直接指定,
+#---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
+#---    4: 資源尾数に対する回帰モデルからの予測値を使う,
+#---    5: MSY計算で利用したものと同じ平行状態時の生物パラメータを使う)
+select_waa_in_future <- 5
 if(select_waa_in_future==1){ # 1の場合にはこちらを設定
     waa_year_in_future <- 2015:2017
 }
 if(select_waa_in_future==2){ # 2の場合にはこちらを設定。年毎に異る場合は年齢×年の行列を入れる
     waa_in_future <- c(100,200,300,400)
 }
-#--- 将来予測で仮定する年齢別体重(漁獲量計算用)の設定(0:資源量計算用と同じ, 1:年で指定, 2:直接指定, 3: MSY計算と同じ)
-select_waa.catch_in_future <- 3
+#--- 将来予測で仮定する年齢別体重(漁獲量計算用)の設定（通常は５を使う？）
+#---   (1: 年で指定, 2:直接指定,
+#---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
+#---    4: 資源尾数に対する回帰モデルからの予測値を使う,
+#---    5: MSY計算で利用したものと同じ平行状態時の生物パラメータを使う)
+select_waa.catch_in_future <- 5
 if(select_waa.catch_in_future==1){ # 1の場合にはこちらを設定
     waa.catch_year_in_future <- 2015:2017
 }
@@ -57,8 +64,11 @@ if(select_waa.catch_in_future==2){ # 2の場合にはこちらを設定。年毎
     waa.catch_in_future <- c(100,200,300,400)
 }
 
-#--- 将来予測で仮定する年齢別成熟率の設定 (1:年で指定, 2:直接指定, 3: MSY計算と同じ)
-select_maa_in_future <- 3
+#--- 将来予測で仮定する年齢別成熟率の設定 (通常は4?)
+#---   (1: 年で指定, 2:直接指定,
+#---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
+#---    4: MSY計算で利用したものと同じ平行状態時の生物パラメータを使う)
+select_maa_in_future <- 4
 if(select_maa_in_future==1){ # 1の場合にはこちらを設定
     maa_year_in_future <- 2015:2017
 }
@@ -66,8 +76,11 @@ if(select_maa_in_future==2){ # 2の場合にはこちらを設定。年毎に異
     maa_in_future <- c(0,0,0.5,1)
 }
 
-#--- 将来予測で仮定する自然死亡係数の設定 (1: 年で指定, 2: 直接指定, 3:MSY計算と同じ))
-select_M_in_future <- 3
+#--- 将来予測で仮定する自然死亡係数の設定 (通常は4?)
+#---   (1: 年で指定, 2:直接指定,
+#---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
+#---    4: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
+select_M_in_future <- 4
 if(select_M_in_future==1){ # 1の場合にはこちらを設定
     M_year_in_future <- 2015:2017
 }
@@ -504,9 +517,20 @@ HCR.future <- list(Blim    = Blimit_update,
                    year.lag= HCR_year_lag)
 
 if(select_waa_in_future==4) waa.fun.set <- TRUE
-if(select_waa_in_future%in%c(1,2)) waa.fun.set <- FALSE
+if(select_waa_in_future%in%c(1,2,5)) waa.fun.set <- FALSE
 if(select_waa_in_future==3) waa.fun.set <- input_MSY$waa.fun
 
+if(select_waa_in_future      == 5 |
+   select_waa.catch_in_future== 5 |
+   select_maa_in_future      == 5 |
+   select_M_in_future        == 5 ){
+    fout.tmp <- do.call(future.vpa,res_MSY$input.list[[1]])
+    last_year <- dim(fout.tmp$naa)[[2]]
+    if(select_waa_in_future == 5) waa_in_future <- unlist(fout.tmp$waa[,last_year,1])
+    if(select_waa.catch_in_future == 5) waa.catch_in_future <- unlist(fout.tmp$waa.catch[,last_year,1])
+    if(select_maa_in_future == 5) maa_in_future <- unlist(fout.tmp$maa[,last_year,1])
+    if(select_M_in_future == 5)   M_in_future   <- unlist(fout.tmp$M[,last_year,1])
+}
 
 input_future_0.8HCR <- list(
     res0     =res_vpa_update,
@@ -525,45 +549,58 @@ input_future_0.8HCR <- list(
     start.year=future_start_year,
     ABC.year  =future_ABC_year,
     waa.year      =switch(select_waa_in_future,
-                          waa_year_in_future,
-                          NULL,
-                          input_MSY$waa.year,
-                          stop("Set appropriate number (1-3) in select_waa_in_future")),
+                          waa_year_in_future, # case 1
+                          NULL,               # case 2
+                          input_MSY$waa.year, # case 3
+                          NULL,               # case 4
+                          NULL,               # case 5
+                          stop("Set appropriate number (1-5) in select_waa_in_future")),
     waa.catch.year=switch(select_waa.catch_in_future,
                           waa.catch_year_in_future,
                           NULL,
                           input_MSY$waa.catch.year,
-                          stop("Set appropriate number (1-3) in select_waa.catch_in_future")),
+                          NULL,
+                          NULL,
+                          stop("Set appropriate number (1-5) in select_waa.catch_in_future")),
     maa.year      =switch(select_maa_in_future,
                           maa_year_in_future,
                           NULL,
-                          input_MSY$maa.year,                          
-                          stop("Set appropriate number (1-3) in select_maa_in_future")),
+                          input_MSY$maa.year,
+                          NULL,
+                          stop("Set appropriate number (1-4) in select_maa_in_future")),
     M.year        =switch(select_M_in_future,
                           M_year_in_future, # case 1
                           NULL,             # case 2
                           input_MSY$M.year, # case 3
-                          stop("Set appropriate number (1-3) in select_M_in_future")),            
+                          NULL,
+                          NULL,
+                          stop("Set appropriate number (1-4) in select_M_in_future")),            
     waa           =switch(select_waa_in_future,
                           NULL,              # case 1
                           waa_in_future,     # case 2
-                          input_MSY$waa,     # case 3                     
-                          stop("Set appropriate number (1-3) in select_waa_in_future")),
+                          input_MSY$waa,     # case 3
+                          NULL,              # case 4 
+                          waa_in_future,     # case 5
+                          stop("Set appropriate number (1-5) in select_waa_in_future")),
     waa.catch     =switch(select_waa.catch_in_future,
                           NULL,                          
                           waa.catch_in_future,
-                          input_MSY$waa.catch,                          
-                          stop("Set appropriate number (1-3) in select_waa.catch_in_future")),            
+                          input_MSY$waa.catch,
+                          NULL,
+                          waa.catch_in_future,
+                          stop("Set appropriate number (1-5) in select_waa.catch_in_future")),            
     maa           =switch(select_maa_in_future,
                           NULL,
                           maa_in_future,
                           input_MSY$maa,
-                          stop("Set appropriate number (1-3) in select_maa_in_future")),    
+                          maa_in_future,
+                          stop("Set appropriate number (1-5) in select_maa_in_future")),    
     M             =switch(select_M_in_future,
                           NULL,
                           M_in_future,
-                          input_MSY$M,                          
-                          stop("Set appropriate number (1-3) in select_M_in_future")),
+                          input_MSY$M,
+                          M_in_future,                          
+                          stop("Set appropriate number (1-5) in select_M_in_future")),
     seed       = future_seed,
     strategy   = "F", 
     HCR        = HCR.future,
@@ -625,13 +662,21 @@ kobeII.table <- make_kobeII_table(kobeII.data,
 cat("## --------------------------------------------------------\n")
 cat("## print setting for future simulations (with current F) \n")
 cat("## --------------------------------------------------------\n")
-print(tibble(age                =dimnames(res_future_current$naa)$age,
-             currentF           =res_future_current$currentF,
-             futureF            =res_future_current$futureF,
-             maturity_init_year =res_future_current$maa[,1,1],
-             bweight_init_year  =res_future_current$waa[,1,1],
-             cweight_init_year  =res_future_current$waa.catch[,1,1],
-             matural_mortality  =res_future_current$M[,1,1]))
+last_year <- dim(res_future_current$naa)[[2]]
+print(tibble(age                = dimnames(res_future_current$naa)$age,
+             currentF           = res_future_current$currentF,
+             futureF            = res_future_current$futureF,
+             F_init_year        = res_future_current$faa[,1,1],
+             F_last_year        = res_future_current$faa[,last_year,1],                          
+             maturity_init_year = res_future_current$maa[,1,1],
+             maturity_last_year = res_future_current$maa[,last_year,1],             
+             bweight_init_year  = res_future_current$waa[,1,1],
+             bweight_last_year  = res_future_current$waa[,last_year,1],             
+             cweight_init_year  = res_future_current$waa.catch[,1,1],
+             cweight_last_year  = res_future_current$waa.catch[,last_year,1],             
+             matural_init_mortality = res_future_current$M[,1,1],
+             matural_last_mortality = res_future_current$M[,last_year,1]))     
+      
 cat("## --------------------------------------------------------\n")
 
 cat("## --------------------------------------------------------\n")
@@ -727,6 +772,7 @@ out.vpa(res=res_vpa_update,
         fres_current=res_future_current,
         fres_HCR=res_future_0.8HCR,
         kobeII=kobeII.table,
+        filename=NULL,
         csvname=csv_file_future,pdfname=pdf_file_future)
 
 options(warn=old.warning)
