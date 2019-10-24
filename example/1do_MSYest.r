@@ -43,7 +43,7 @@ if(do_diagnostics==1){
 
 #-- 3) MSY推定の設定（F一定の条件下での将来予測をもとにする）
 #-- MSY推定をするかどうか（1: する, 0: しない）
-do_MSY_estimation <- 0
+do_MSY_estimation <- 1
 #--- MSY推定で用いる選択率（近年のF at age＝Fcurrentにおける選択率がそのまま将来も受け継がれるという仮定）
 #---   (1: vpaの結果の中のFc.at.ageをそのまま使う; ややこしいので廃止予定)
 #---   2: 手動でFcurrentを設定する
@@ -95,7 +95,7 @@ MSY_est_plot <- 1
 
 #-- 生物パラメータ
 #--- MSY計算時の年齢別体重(資源量計算用)の設定(1:年で指定する、2:直接指定する、3:年齢別資源尾数と体重の回帰式から毎年の体重を予測する。このオプションを使う場合は、waa.catchも同じ体重を使うことになるので注意)
-select_waa_in_MSY <- 1
+select_waa_in_MSY <- 3
 if(select_waa_in_MSY==1){ # 1の場合にはこちらを設定
     waa_year_in_MSY <- 2013:2017
 }
@@ -104,18 +104,14 @@ if(select_waa_in_MSY==2){ # 2の場合にはこちらを設定。年毎に異る
 }
 
 #--- MSY計算時の年齢別体重(漁獲量計算用)の設定(0:資源量計算用と同じ、1:年数で指定、2:直接指定)
-{if(select_waa_in_MSY==3){
-     select_waa.catch_in_MSY <- 3
- }
- else{
-     select_waa.catch_in_MSY <- 1
-     if(select_waa.catch_in_MSY==1){ # 1の場合にはこちらを設定
-         waa.catch_year_in_MSY <- 2013:2017
-     }
-     if(select_waa.catch_in_MSY==2){ # 2の場合にはこちらを設定。年毎に異る場合は年齢×年の行列を入れる
-         waa.catch_in_MSY <- c(100,200,300,400)
-     }
- }}
+#---  注) select_waa_in_MSYを３に指定した場合には、以下の設定を1-2にしても、３で上書きされる
+select_waa.catch_in_MSY <- 1
+if(select_waa.catch_in_MSY==1){ # 1の場合にはこちらを設定
+    waa.catch_year_in_MSY <- 2013:2017
+}
+if(select_waa.catch_in_MSY==2){ # 2の場合にはこちらを設定。年毎に異る場合は年齢×年の行列を入れる
+    waa.catch_in_MSY <- c(100,200,300,400)
+}
 
 #--- MSY計算時の年齢別成熟率の設定(1:年数で指定、2:直接指定)
 select_maa_in_MSY <- 1
@@ -438,11 +434,12 @@ input_future_MSY <- list(
     waa           =switch(select_waa_in_MSY,
                           NULL,
                           waa_in_MSY,
+                          NULL,
                           stop("Set appropriate number (1-2) in select_waa_in_MSY")),
     waa.catch     =switch(select_waa.catch_in_MSY,
                           NULL,
-                          "2"=waa.catch_in_MSY,
                           waa.catch_in_MSY,
+                          NULL,
                           stop("Set appropriate number (1-2) in select_waa.catch_in_MSY")),
     maa           =switch(select_maa_in_MSY,
                           NULL,
@@ -464,7 +461,6 @@ input_future_MSY <- list(
     plus.group =res_vpa_MSY$input$plus.group,
     silent     =TRUE,
     is.plot    =FALSE,
-    random.select=NULL,
     recfunc    =SRfun_MSY,
     rec.arg    =opt_SR_MSY,
     rec.new    =NULL,
@@ -673,7 +669,7 @@ out.vpa(res=res_vpa_MSY,
         msyres=(if(do_MSY_estimation==1) res_MSY else NULL),
         fres_current=NULL,
         fres_HCR=NULL,
-        kobeII=NULL,
+        kobeII=NULL,filename=NULL,
         csvname=csv_file_MSY,pdfname=pdf_file_MSY)
 
 
