@@ -43,7 +43,7 @@ future_est_plot <- 1
 #---   (1: 年で指定, 2:直接指定,
 #---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
 #---    4: 資源尾数に対する回帰モデルからの予測値を使う,
-#---    5: MSY計算で利用したものと同じ平行状態時の生物パラメータを使う)
+#---    5: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
 select_waa_in_future <- 5
 if(select_waa_in_future==1){ # 1の場合にはこちらを設定
     waa_year_in_future <- 2015:2017
@@ -55,7 +55,7 @@ if(select_waa_in_future==2){ # 2の場合にはこちらを設定。年毎に異
 #---   (1: 年で指定, 2:直接指定,
 #---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
 #---    4: 資源尾数に対する回帰モデルからの予測値を使う,
-#---    5: MSY計算で利用したものと同じ平行状態時の生物パラメータを使う)
+#---    5: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
 select_waa.catch_in_future <- 5
 if(select_waa.catch_in_future==1){ # 1の場合にはこちらを設定
     waa.catch_year_in_future <- 2015:2017
@@ -67,7 +67,7 @@ if(select_waa.catch_in_future==2){ # 2の場合にはこちらを設定。年毎
 #--- 将来予測で仮定する年齢別成熟率の設定 (通常は4?)
 #---   (1: 年で指定, 2:直接指定,
 #---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
-#---    4: MSY計算で利用したものと同じ平行状態時の生物パラメータを使う)
+#---    4: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
 select_maa_in_future <- 4
 if(select_maa_in_future==1){ # 1の場合にはこちらを設定
     maa_year_in_future <- 2015:2017
@@ -87,6 +87,23 @@ if(select_M_in_future==1){ # 1の場合にはこちらを設定
 if(select_M_in_future==2){ # 2の場合にはこちらを設定。年毎に異る場合は年齢×年の行列を入れる
     M_in_future <- c(0,0,0.5,1)
 }
+
+#--- 特定の年の生物パラメータを別のものに置き換える場合(0: 置き換えない, 1: 置き換える)
+set_specific_biopara <- 1
+if(set_specific_biopara==1){ # 1の場合、以下の変数を設定する
+    # 特に置き換えが必要ないものにはNULLを入れる
+    # 置き換えたい場合は、tibble("年"=その年の年齢別パラメータ)のように入れる
+    # weight at age
+    specific_waa_future <- tibble("2020"=c(10,20,30,40),"2021"=c(20,30,40,40))
+    # catch weight at age
+    specific_waa.catch_future <- NULL    
+    # maturity at age
+    specific_maa_future <- tibble("2020"=c(0,0.1,0.5,1))
+    # M at age
+    specific_M_future   <- NULL    
+}
+
+
 
 #-- 3) 再生産関係の設定
 #--- MSY計算とすべて同じ仮定を使うか (1: 使う, 0: 使わずすべて手動で設定する)
@@ -510,12 +527,13 @@ if(select_FAA_afterABC%in%c(1,2,4,5,6)){
     FAA_afterABC  %>% round(2) %>% print()
 }
 
-
+# setting HCR
 HCR.future <- list(Blim    = Blimit_update,
                    Bban    = Bban_update,
                    beta    = beta_default,
                    year.lag= HCR_year_lag)
 
+# setting future biological parameters
 if(select_waa_in_future==4) waa.fun.set <- TRUE
 if(select_waa_in_future%in%c(1,2,5)) waa.fun.set <- FALSE
 if(select_waa_in_future==3) waa.fun.set <- input_MSY$waa.fun
@@ -613,7 +631,6 @@ input_future_0.8HCR <- list(
     plus.group = res_vpa_update$input$plus.group,
     silent     = TRUE,
     is.plot    = future_est_plot, 
-    random.select=NULL, 
     recfunc    = SRfun_future, 
     rec.arg    = opt_SR_future,
     rec.new    = (if(select_specific_recruit==0) NULL else list(year=recruit_year,rec=recruit_number)),
@@ -628,6 +645,33 @@ if(do_MSE==1){
 cat("## --------------------------------------------------------\n")
 cat(str_c("## Condut simple MSE calc (N=",MSE_nsim,").... Please wait...  \n"))
 cat("## --------------------------------------------------------\n")
+}
+
+# setting future biological parameters again!
+if(set_specific_biopara==1){
+    input_future_tmp <- input_future_0.8HCR
+    input_future_tmp$N <- 2
+    future_tmp <- do.call(future.vpa,input_future_tmp)
+    if(!is.null(specific_waa_future)){
+        tmp <- future_tmp$waa[,,1]
+        tmp[,colnames(tmp)%in%colnames(specific_waa_future)] <- as.matrix(specific_waa_future)
+        input_future_0.8HCR$waa <- cbind(tmp,t(tail(t(tmp),n=1)))
+    }
+    if(!is.null(specific_waa.catch_future)){
+        tmp <- future_tmp$waa.catch[,,1]
+        tmp[,colnames(tmp)%in%colnames(specific_waa.catch_future)] <- as.matrix(specific_waa.catch_future)
+        input_future_0.8HCR$waa.catch <- cbind(tmp,t(tail(t(tmp),n=1)))        
+    }
+    if(!is.null(specific_maa_future)){
+        tmp <- future_tmp$maa[,,1]
+        tmp[,colnames(tmp)%in%colnames(specific_maa_future)] <- as.matrix(specific_maa_future)
+        input_future_0.8HCR$maa <- cbind(tmp,t(tail(t(tmp),n=1)))        
+    }    
+    if(!is.null(specific_M_future)){
+        tmp <- future_tmp$M[,,1]
+        tmp[,colnames(tmp)%in%colnames(specific_M_future)] <- as.matrix(specific_M_future)
+        input_future_0.8HCR$M <- cbind(tmp,t(tail(t(tmp),n=1)))        
+    }        
 }
 
 res_future_0.8HCR <- do.call(future.vpa,input_future_0.8HCR)

@@ -461,7 +461,6 @@ input_future_MSY <- list(
     plus.group =res_vpa_MSY$input$plus.group,
     silent     =TRUE,
     is.plot    =FALSE,
-    random.select=NULL,
     recfunc    =SRfun_MSY,
     rec.arg    =opt_SR_MSY,
     rec.new    =NULL,
