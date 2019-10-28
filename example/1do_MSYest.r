@@ -350,16 +350,8 @@ if(do_diagnostics==1){
 }
 
 # 3) MSY推定のための将来予測の設定
-
-
 future_MSY_year <- vpa_years[apply(res_vpa_MSY$input$dat$caa,2,sum)>0] %>%
     as.numeric() %>% max()
-res_vpa_MSY$naa <-  res_vpa_MSY$naa[,as.numeric(colnames(res_vpa_MSY$naa))<=future_MSY_year]
-res_vpa_MSY$faa <-  res_vpa_MSY$faa[,as.numeric(colnames(res_vpa_MSY$faa))<=future_MSY_year]
-res_vpa_MSY$ssb <-  res_vpa_MSY$ssb[,as.numeric(colnames(res_vpa_MSY$ssb))<=future_MSY_year]
-res_vpa_MSY$baa <-  res_vpa_MSY$baa[,as.numeric(colnames(res_vpa_MSY$baa))<=future_MSY_year]
-res_vpa_MSY$wcaa <- res_vpa_MSY$wcaa[,as.numeric(colnames(res_vpa_MSY$wcaa))<=future_MSY_year]
-res_vpa_MSY$saa <-  res_vpa_MSY$saa[,as.numeric(colnames(res_vpa_MSY$saa))<=future_MSY_year]
 vpa_years <- colnames(res_vpa_MSY$naa)
 
 if(SR_error_MSY==1){# lognormal
