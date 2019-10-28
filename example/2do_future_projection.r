@@ -685,14 +685,6 @@ if(set_specific_biopara==1){
     }        
 }
 
-# future_start_yearに合わせてデータを調整する
-res_vpa_update$naa <-  res_vpa_update$naa[,as.numeric(colnames(res_vpa_update$naa))<future_start_year]
-res_vpa_update$faa <-  res_vpa_update$faa[,as.numeric(colnames(res_vpa_update$faa))<future_start_year]
-res_vpa_update$ssb <-  res_vpa_update$ssb[,as.numeric(colnames(res_vpa_update$ssb))<future_start_year]
-res_vpa_update$baa <-  res_vpa_update$baa[,as.numeric(colnames(res_vpa_update$baa))<future_start_year]
-res_vpa_update$wcaa <- res_vpa_update$wcaa[,as.numeric(colnames(res_vpa_update$wcaa))<future_start_year]
-res_vpa_update$saa <-  res_vpa_update$saa[,as.numeric(colnames(res_vpa_update$saa))<future_start_year]
-
 res_future_0.8HCR <- do.call(future.vpa,input_future_0.8HCR)
 
 # current F run
