@@ -1,5 +1,8 @@
-#- HCRに従った将来予測の実施
-#-- 1) 読み込みファイルの設定
+#- HCRに従った将来予測の実施　
+#-- 1) 入出力ファイル　---- 
+#-- 1-1) 読み込みファイル　----
+#--- MSY推定結果（res_MSY）が保存されているファイルの名前
+MSY_file_path <- "res_MSY_HSL2.rda"
 #--- 将来予測で使うVPA結果を更新するか？
 #---  (0: しないでMSY計算に使った結果を使う
 #        （MSY推定結果が保存されているファイルに記録されているものを利用; 管理基準値を最初に計算する研究機関会議用）
@@ -11,8 +14,8 @@ if(use_new_vpa_res==1){
     #--- VPAの結果のファイルの種類（1: Rオブジェクト, 2: csv形式)
     vpa_file_type <- 1
 }
-#--- MSY推定結果（res_MSY）が保存されているファイルの名前
-MSY_file_path <- "res_MSY_HSL2.rda"
+
+#-- 1-2) 出力ファイル ----
 #--- 将来予測結果を保存するファイルの名前（以下のオブジェクトがリスト形式で入っています）
 #---- res_future_0.8HCR ; β=0.8の将来予測の結果
 #---- res_future_current; Fcurrentでの将来予測の結果
@@ -20,7 +23,7 @@ MSY_file_path <- "res_MSY_HSL2.rda"
 future_file_path <- "res_futures0.rda"
 #--- グラフのファイル名
 graph_file_future <- "future_graph0.png"
-#--- 結果をcsvファイルで出力するときのファイル名
+#--- 結果をcsvファイルで出力するときのファイル名　# <- 出力が変（colnameが出てない)
 csv_file_future <- "future0.csv"
 #--- 結果の簡単なグラフをpdfファイルで出力するときのファイル名(まだちゃんとした結果は出ないです)
 pdf_file_future <- "future0.pdf"
@@ -28,7 +31,7 @@ pdf_file_future <- "future0.pdf"
 #--- 実行したときの警告を表示するかどうか (-1: 表示しない, 0: 表示する)
 warning_option <- -1
 
-#-- 2) 将来予測の基本設定
+#-- 2) 将来予測の基本設定 ----
 #--- 漁獲量の計算方法（1:VPAと同じ設定を使う, 2:Popeの近似式を使う, 3:Bavanovの式を使う）
 is_pope <- 1
 #--- 乱数のシード
@@ -39,23 +42,25 @@ future_nsim <- 1000
 future_est_plot <- 1
 
 #-- 生物パラメータ
-#--- 将来予測で仮定する年齢別体重(資源量計算用)の設定（通常は５を使う？）
-#---   (1: 年で指定, 2:直接指定,
+#--- 将来予測で仮定する年齢別体重(資源量計算用)の設定（通常は4を使う？）
+#---   (1: 年で指定,
+#---    2: 直接指定,
 #---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
-#---    4: 資源尾数に対する回帰モデルからの予測値を使う,
-#---    5: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
-select_waa_in_future <- 5
+#---    4: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う,
+#---    5: 資源尾数に対する回帰モデルからの予測値を使う)
+select_waa_in_future <- 4
 if(select_waa_in_future==1){ # 1の場合にはこちらを設定
     waa_year_in_future <- 2015:2017
 }
 if(select_waa_in_future==2){ # 2の場合にはこちらを設定。年毎に異る場合は年齢×年の行列を入れる
     waa_in_future <- c(100,200,300,400)
 }
-#--- 将来予測で仮定する年齢別体重(漁獲量計算用)の設定（通常は５を使う？）
-#---   (1: 年で指定, 2:直接指定,
+#--- 将来予測で仮定する年齢別体重(漁獲量計算用)の設定（通常は4を使う？）
+#---   (1: 年で指定,
+#---    2:直接指定,
 #---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
-#---    4: 資源尾数に対する回帰モデルからの予測値を使う,
-#---    5: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
+#---    4: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う,
+#---    5: 資源尾数に対する回帰モデルからの予測値を使う)
 select_waa.catch_in_future <- 5
 if(select_waa.catch_in_future==1){ # 1の場合にはこちらを設定
     waa.catch_year_in_future <- 2015:2017
@@ -64,8 +69,9 @@ if(select_waa.catch_in_future==2){ # 2の場合にはこちらを設定。年毎
     waa.catch_in_future <- c(100,200,300,400)
 }
 
-#--- 将来予測で仮定する年齢別成熟率の設定 (通常は4?)
-#---   (1: 年で指定, 2:直接指定,
+#--- 将来予測で仮定する年齢別成熟率の設定 (通常は4)
+#---   (1: 年で指定,
+#---    2: 直接指定,
 #---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
 #---    4: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
 select_maa_in_future <- 4
@@ -76,8 +82,9 @@ if(select_maa_in_future==2){ # 2の場合にはこちらを設定。年毎に異
     maa_in_future <- c(0,0,0.5,1)
 }
 
-#--- 将来予測で仮定する自然死亡係数の設定 (通常は4?)
-#---   (1: 年で指定, 2:直接指定,
+#--- 将来予測で仮定する自然死亡係数の設定 (通常は4)
+#---   (1: 年で指定,
+#---    2: 直接指定,
 #---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
 #---    4: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
 select_M_in_future <- 4
@@ -103,12 +110,10 @@ if(set_specific_biopara==1){ # 1の場合、以下の変数を設定する
     specific_M_future   <- NULL    
 }
 
-
-
-#-- 3) 再生産関係の設定
+#-- 3) 再生産関係の設定 ----
 #--- MSY計算とすべて同じ仮定を使うか (1: 使う, 0: 使わずすべて手動で設定する)
 #--- クロスチェック（再生産関係Aを前提とした管理基準値のもとで、再生産関係が実はBだった場合のシミュレーション）などをする場合に使う
-use_MSY_SR <- 1
+use_MSY_SR <- 0
 if(use_MSY_SR==0){ # すべて手動で計算する場合、以下のオプションを設定
     #--- 将来予測で仮定する再生産関係の推定結果が保存されているファイルの名前
     SR_file_path <- "res_SR_HSL2.rda"    
@@ -131,7 +136,7 @@ if(use_MSY_SR==0){ # すべて手動で計算する場合、以下のオプシ�
     }
 }
 
-#-- 4) 簡易MSEの設定
+#-- 4) 簡易MSEの設定 ----
 #--- 管理MSEを利用するかどうか (0: しない（通常の将来予測）, 1: する)
 do_MSE <- 0
 if(do_MSE==1){ # MSEをやる場合は以下の設定をする
@@ -164,7 +169,7 @@ if(do_MSE==1){ # MSEをやる場合は以下の設定をする
     }
 }
 
-#-- 5) 年数や回数などの設定
+#-- 5) 年数や回数などの設定 ----
 #--- 将来予測開始年
 future_start_year <- 2018
 #--- ABC計算年（この年からHCRに沿った漁獲を開始する）
@@ -189,7 +194,8 @@ if(select_specific_catch==1){
     catch_weight <- c(1000,1000)
 }
 
-#-- 6) 漁獲シナリオの設定
+#-- 6) 漁獲シナリオの設定 ----
+#-- 6-1) HCRシナリオの設定 ----
 #--- HCRを実施するときのSSB参照年 (0: ABC算定年とSSBの参照年が同じ。0より小さい負の整数：時間遅れの年数（２年遅れの場合は-2）。デフォルトは0)
 HCR_year_lag <- 0
 #--- HCRが有効な場合の管理基準値 (0: MSY_resで指定されたBtarget0, Blimit0, Bban0をそのまま使う。
@@ -211,9 +217,12 @@ if(overwrite_RP==1){ # MSY_resの設定を上書きする場合
 }
 #---- HCRの将来予測におけるデフォルトのベータ(通常は0.8)
 beta_default <- 0.8
-#---- ベータをいろいろ変える将来予測におけるベータの範囲
+#---- ベータをいろいろ変える将来予測におけるベータの値
 beta_table <- c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1)
 
+#--- 毎年betaを変えるオプション？
+
+#-- 6-2) F at age ----
 #--将来予測におけるF at ageの設定
 #--  (HCRをもとにした将来予測では、ABC計算年以前にはselect_FAA_preABCで設定された年齢別漁獲係数で漁獲し、
 #--   ABC計算年以降はselect_FAA_afterABCで設定された年齢別漁獲係数×β×γで漁獲します)
@@ -224,7 +233,8 @@ beta_table <- c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1)
 #---   2: 手動でFcurrentを設定する
 #---   3: vpaのF at ageに対して年を指定し、その平均を使う,
 #---   4: 選択率を参照する年と漁獲圧を参照する年を別にする（漁獲圧はSPR換算して、指定された選択率において同じ漁獲圧になるようなFcurrentを用いる。SPR換算するときの生物パラメータは、漁獲圧として指定された年の生物パラメータの平均とする））
-#---   5: 漁獲圧はFmsyを使うが、別の選択率を用いる（漁獲圧はSPR換算して、Fmsyと漁獲圧になるようなFcurrentを計算する。SPR換算するときの生物パラメータは、MSY推定に用いた生物パラメータの平均とする）
+#---   5??: 漁獲圧はFmsyを使うが、別の選択率を用いる（漁獲圧はSPR換算して、Fmsyと漁獲圧になるようなFcurrentを計算する。SPR換算するときの生物パラメータは、MSY推定に用いた生物パラメータの平均とする）
+#--- 6: 選択率はFmsyを使うが、漁獲圧はなんか別のものを使う？？
 select_FAA_preABC <- 3
 #---- 上で2を選んだ場合:FcurrentとしたいFをベクトルで入力
 if(select_FAA_preABC==2){
@@ -255,7 +265,9 @@ if(select_FAA_preABC==5){
     # Fsel_year <- -1:-10
 }
 
-#--- ABC計算年以降のF-at-age(FAA)の設定(デフォルトは1)
+#--- Fcurrentでの将来予測で使うFの設定
+
+#--- ABC計算年以降のF-at-age(FAA)&HCR使う場合の設定(デフォルトは1)
 #---   1: Fmsy at age (=MSY_resで"Btarget0"の管理基準値に対応するF at age)
 #---   2: ABC.year以前のF at ageと共通
 #---   3: 手動でFcurrentを設定する
@@ -291,7 +303,10 @@ if(select_FAA_afterABC==6){
     # Fsel_year <- -1:-10
 }
 
-#-- 7) 出力の調整：下記の各項目について表として出力したい年数を入れるか、表が必要ない場合はマイナス値を入れる
+#---- 上記に加えて、f at ageをカスタムで上書きするオプションを追加するか？
+
+#-- 7) 出力の調整 ----
+#--- 下記の各項目について表として出力したい年数を入れるか、表が必要ない場合はマイナス値を入れる
 #--- 将来の平均漁獲量
 year_catch_average <- c(2019:2030,2040,2050)
 #--- 将来の平均親魚量
@@ -534,20 +549,20 @@ HCR.future <- list(Blim    = Blimit_update,
                    year.lag= HCR_year_lag)
 
 # setting future biological parameters
-if(select_waa_in_future==4) waa.fun.set <- TRUE
-if(select_waa_in_future%in%c(1,2,5)) waa.fun.set <- FALSE
+if(select_waa_in_future==5) waa.fun.set <- TRUE
+if(select_waa_in_future%in%c(1,2,4)) waa.fun.set <- FALSE
 if(select_waa_in_future==3) waa.fun.set <- input_MSY$waa.fun
 
-if(select_waa_in_future      == 5 |
-   select_waa.catch_in_future== 5 |
-   select_maa_in_future      == 5 |
-   select_M_in_future        == 5 ){
+if(select_waa_in_future      == 4 |
+   select_waa.catch_in_future== 4 |
+   select_maa_in_future      == 4 |
+   select_M_in_future        == 4 ){
     fout.tmp <- do.call(future.vpa,res_MSY$input.list[[1]])
     last_year <- dim(fout.tmp$naa)[[2]]
-    if(select_waa_in_future == 5) waa_in_future <- unlist(fout.tmp$waa[,last_year,1])
-    if(select_waa.catch_in_future == 5) waa.catch_in_future <- unlist(fout.tmp$waa.catch[,last_year,1])
-    if(select_maa_in_future == 5) maa_in_future <- unlist(fout.tmp$maa[,last_year,1])
-    if(select_M_in_future == 5)   M_in_future   <- unlist(fout.tmp$M[,last_year,1])
+    if(select_waa_in_future == 4) waa_in_future <- unlist(fout.tmp$waa[,last_year,1])
+    if(select_waa.catch_in_future == 4) waa.catch_in_future <- unlist(fout.tmp$waa.catch[,last_year,1])
+    if(select_maa_in_future == 4) maa_in_future <- unlist(fout.tmp$maa[,last_year,1])
+    if(select_M_in_future == 4)   M_in_future   <- unlist(fout.tmp$M[,last_year,1])
 }
 
 input_future_0.8HCR <- list(
@@ -597,15 +612,15 @@ input_future_0.8HCR <- list(
                           NULL,              # case 1
                           waa_in_future,     # case 2
                           input_MSY$waa,     # case 3
-                          NULL,              # case 4 
-                          waa_in_future,     # case 5
+                          waa_in_future,     # case 4
+                          NULL,              # case 5                           
                           stop("Set appropriate number (1-5) in select_waa_in_future")),
     waa.catch     =switch(select_waa.catch_in_future,
                           NULL,                          
                           waa.catch_in_future,
                           input_MSY$waa.catch,
+                          waa.catch_in_future,                          
                           NULL,
-                          waa.catch_in_future,
                           stop("Set appropriate number (1-5) in select_waa.catch_in_future")),            
     maa           =switch(select_maa_in_future,
                           NULL,
@@ -685,6 +700,7 @@ res_future_current <- do.call(future.vpa,input_future_current)
 plot_futures(res_vpa_update,list(res_future_0.8HCR,res_future_current))
 
 # kobe II table
+# 80%信頼区間を資源評価票の書式にのっとって出せるようにしておく
 kobeII.data <- beta.simulation(input_future_0.8HCR,
                                beta_vector=beta_table,
                                year.lag=HCR_year_lag)
@@ -763,15 +779,16 @@ theme_SH <- function(){
 SPR.history <- get.SPR(res_vpa_update,
                        target.SPR=SPR_MSY_update*100,
                        max.age=Inf,Fmax=1)$ysdata
-Fratio <- SPR.history$"F/Ftarget"
-Bratio <- colSums(res_vpa_update$ssb)/derive_RP_value(res_MSY$summary,"Btarget0")$SSB
+kobe.ratio <- tibble(year=colnames(res_vpa_update$ssb),
+                     Fratio=SPR.history$"F/Ftarget",
+                     Bratio=colSums(res_vpa_update$ssb)/
+                         derive_RP_value(res_MSY$summary,"Btarget0")$SSB) %>%
+    dplyr::filter(!is.na(Bratio))
 
 cat("## --------------------------------------------------------\n")
 cat("## Historical F/Fmsy & B/Bmsy values ------------\n")
 cat("## --------------------------------------------------------\n")
-kobe.ratio <- tibble(Bratio=Bratio,Fratio=Fratio) %>%
-    mutate(Bratio=round(Bratio,2),Fratio=round(Fratio,2)) %>%
-    print()
+kobe.ratio %>% print()
 cat("## --------------------------------------------------------\n")
 
 g3_kobe4 <- plot_kobe_gg(res_vpa_update,
@@ -783,7 +800,7 @@ g3_kobe4 <- plot_kobe_gg(res_vpa_update,
                            refs.color=c(1,1,1),
                            yscale=1.2, # y軸を最大値の何倍まで表示するか。ラベルの重なり具合を見ながら調整してください
                            HCR.label.position=c(1,1),# HCRの説明を書くラベルの位置。相対値なので位置を見ながら調整してください。
-                            ylab.type="F",Fratio=Fratio)+theme_SH()
+                         ylab.type="F",Fratio=kobe.ratio$Fratio)+theme_SH()
 
 # plot future projection
 (g4_future <- plot_futures(res_vpa_update, #vpaの結果
