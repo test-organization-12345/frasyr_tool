@@ -32,6 +32,7 @@ source("1do_MSYest.r", encoding="UTF-8")
 #--- 3. グラフ
 #------- * 再生産関係のグラフ：g1_SRplot
 #------- * 漁獲量曲線のグラフ：g2_yield_curve
+#------- * kobe plot：g2_yield_curve
 #------- * 2つのグラフのまとめ：graph_all
 
 # 科学者会議で計算：推定した管理基準値で将来予測

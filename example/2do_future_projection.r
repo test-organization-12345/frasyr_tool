@@ -41,23 +41,25 @@ future_nsim <- 1000
 future_est_plot <- 1
 
 #-- 生物パラメータ
-#--- 将来予測で仮定する年齢別体重(資源量計算用)の設定（通常は５を使う？）
-#---   (1: 年で指定, 2:直接指定,
+#--- 将来予測で仮定する年齢別体重(資源量計算用)の設定（通常は4を使う？）
+#---   (1: 年で指定,
+#---    2: 直接指定,
 #---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
-#---    4: 資源尾数に対する回帰モデルからの予測値を使う,
-#---    5: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
-select_waa_in_future <- 5
+#---    4: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う,
+#---    5: 資源尾数に対する回帰モデルからの予測値を使う)
+select_waa_in_future <- 4
 if(select_waa_in_future==1){ # 1の場合にはこちらを設定
     waa_year_in_future <- 2015:2017
 }
 if(select_waa_in_future==2){ # 2の場合にはこちらを設定。年毎に異る場合は年齢×年の行列を入れる
     waa_in_future <- c(100,200,300,400)
 }
-#--- 将来予測で仮定する年齢別体重(漁獲量計算用)の設定（通常は５を使う？）
-#---   (1: 年で指定, 2:直接指定,
+#--- 将来予測で仮定する年齢別体重(漁獲量計算用)の設定（通常は4を使う？）
+#---   (1: 年で指定,
+#---    2:直接指定,
 #---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
-#---    4: 資源尾数に対する回帰モデルからの予測値を使う,
-#---    5: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
+#---    4: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う,
+#---    5: 資源尾数に対する回帰モデルからの予測値を使う)
 select_waa.catch_in_future <- 5
 if(select_waa.catch_in_future==1){ # 1の場合にはこちらを設定
     waa.catch_year_in_future <- 2015:2017
@@ -66,8 +68,9 @@ if(select_waa.catch_in_future==2){ # 2の場合にはこちらを設定。年毎
     waa.catch_in_future <- c(100,200,300,400)
 }
 
-#--- 将来予測で仮定する年齢別成熟率の設定 (通常は4?)
-#---   (1: 年で指定, 2:直接指定,
+#--- 将来予測で仮定する年齢別成熟率の設定 (通常は4)
+#---   (1: 年で指定,
+#---    2: 直接指定,
 #---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
 #---    4: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
 select_maa_in_future <- 4
@@ -78,8 +81,9 @@ if(select_maa_in_future==2){ # 2の場合にはこちらを設定。年毎に異
     maa_in_future <- c(0,0,0.5,1)
 }
 
-#--- 将来予測で仮定する自然死亡係数の設定 (通常は4?)
-#---   (1: 年で指定, 2:直接指定,
+#--- 将来予測で仮定する自然死亡係数の設定 (通常は4)
+#---   (1: 年で指定,
+#---    2: 直接指定,
 #---    3: MSY計算と同じやりかたで計算（MSY計算時に年で指定している場合は同じ参照年を使用する）,
 #---    4: MSY計算で利用したものと同じ平衡状態時の生物パラメータを使う)
 select_M_in_future <- 4
@@ -541,18 +545,18 @@ HCR.future <- list(Blim    = Blimit_update,
                    year.lag= HCR_year_lag)
 
 # setting future biological parameters
-if(select_waa_in_future==4) waa.fun.set <- TRUE
-if(select_waa_in_future%in%c(1,2,5)) waa.fun.set <- FALSE
+if(select_waa_in_future==5) waa.fun.set <- TRUE
+if(select_waa_in_future%in%c(1,2,4)) waa.fun.set <- FALSE
 if(select_waa_in_future==3) waa.fun.set <- input_MSY$waa.fun
 
-if(select_waa_in_future      == 5 |
-   select_waa.catch_in_future== 5 |
+if(select_waa_in_future      == 4 |
+   select_waa.catch_in_future== 4 |
    select_maa_in_future      == 4 |
    select_M_in_future        == 4 ){
     fout.tmp <- do.call(future.vpa,res_MSY$input.list[[1]])
     last_year <- dim(fout.tmp$naa)[[2]]
-    if(select_waa_in_future == 5) waa_in_future <- unlist(fout.tmp$waa[,last_year,1])
-    if(select_waa.catch_in_future == 5) waa.catch_in_future <- unlist(fout.tmp$waa.catch[,last_year,1])
+    if(select_waa_in_future == 4) waa_in_future <- unlist(fout.tmp$waa[,last_year,1])
+    if(select_waa.catch_in_future == 4) waa.catch_in_future <- unlist(fout.tmp$waa.catch[,last_year,1])
     if(select_maa_in_future == 4) maa_in_future <- unlist(fout.tmp$maa[,last_year,1])
     if(select_M_in_future == 4)   M_in_future   <- unlist(fout.tmp$M[,last_year,1])
 }
@@ -604,15 +608,15 @@ input_future_0.8HCR <- list(
                           NULL,              # case 1
                           waa_in_future,     # case 2
                           input_MSY$waa,     # case 3
-                          NULL,              # case 4 
-                          waa_in_future,     # case 5
+                          waa_in_future,     # case 4
+                          NULL,              # case 5                           
                           stop("Set appropriate number (1-5) in select_waa_in_future")),
     waa.catch     =switch(select_waa.catch_in_future,
                           NULL,                          
                           waa.catch_in_future,
                           input_MSY$waa.catch,
+                          waa.catch_in_future,                          
                           NULL,
-                          waa.catch_in_future,
                           stop("Set appropriate number (1-5) in select_waa.catch_in_future")),            
     maa           =switch(select_maa_in_future,
                           NULL,
@@ -680,6 +684,14 @@ if(set_specific_biopara==1){
         input_future_0.8HCR$M <- cbind(tmp,t(tail(t(tmp),n=1)))        
     }        
 }
+
+# future_start_yearに合わせてデータを調整する
+res_vpa_update$naa <-  res_vpa_update$naa[,as.numeric(colnames(res_vpa_update$naa))<future_start_year]
+res_vpa_update$faa <-  res_vpa_update$faa[,as.numeric(colnames(res_vpa_update$faa))<future_start_year]
+res_vpa_update$ssb <-  res_vpa_update$ssb[,as.numeric(colnames(res_vpa_update$ssb))<future_start_year]
+res_vpa_update$baa <-  res_vpa_update$baa[,as.numeric(colnames(res_vpa_update$baa))<future_start_year]
+res_vpa_update$wcaa <- res_vpa_update$wcaa[,as.numeric(colnames(res_vpa_update$wcaa))<future_start_year]
+res_vpa_update$saa <-  res_vpa_update$saa[,as.numeric(colnames(res_vpa_update$saa))<future_start_year]
 
 res_future_0.8HCR <- do.call(future.vpa,input_future_0.8HCR)
 
