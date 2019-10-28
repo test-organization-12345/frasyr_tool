@@ -1,9 +1,9 @@
-#-- MSY管理基準値を計算する
+#-- MSY管理基準値を計算する ---- # コードセクションを追加する
 
 #-- 1) 読み込みファイルの設定
 #--- VPA結果が保存されているファイルの名前
 vpa_file_path_MSY <- "res_vpa.rda"
-#--- VPAの結果のファイルの種類（1: Rオブジェクト, 2: csv形式)
+#--- VPAの結果のファイルの種類（1: Rオブジェクト(save(vpa_res,file="vpa_res.rda")), 2: csv形式(out.vpa(vpa_res)))
 vpa_file_type_MSY <- 1
 #--- MSY推定で仮定する再生産関係の推定結果を保存するファイルの名前
 SR_file_path_MSY <- "res_SR_HSL2.rda"
@@ -38,17 +38,18 @@ if(do_diagnostics==1){
     diagnostic_file <- "diagnostic.pdf"
     # ブートストラップ推定する場合のブートストラップ回数
     n_boot_SR <- 10
-    
+   
 }
 
 #-- 3) MSY推定の設定（F一定の条件下での将来予測をもとにする）
 #-- MSY推定をするかどうか（1: する, 0: しない）
 do_MSY_estimation <- 1
-#--- MSY推定で用いる選択率（近年のF at age＝Fcurrentにおける選択率がそのまま将来も受け継がれるという仮定）
+#--- MSY推定で用いる選択率（近年の選択率がそのまま将来も受け継がれるという仮定）
 #---   (1: vpaの結果の中のFc.at.ageをそのまま使う; ややこしいので廃止予定)
 #---   2: 手動でFcurrentを設定する
 #---   3: vpaのF at ageに対して年を指定し、その平均を使う,
 #---   4: 選択率を参照する年と漁獲圧を参照する年を別にする（漁獲圧はSPR換算して、指定された選択率において同じ漁獲圧になるようなFcurrentを用いる。SPR換算するときの生物パラメータは、漁獲圧として指定された年の生物パラメータの平均とする））
+#---  5: 選択率を手動で打ち込んだあとに、Fの強さは年数指定する（未実装）
 select_Fcurrent_MSY <- 4
 #---- 上で2を選んだ場合:FcurrentとしたいFをベクトルで入力
 if(select_Fcurrent_MSY==2){
@@ -61,7 +62,7 @@ if(select_Fcurrent_MSY==3){
     # 実際の年を指定する場合
     Fcurrent_year_MSY <- 2015:2017
     # マイナス値を入れると最新年から数えて何年分遡るかで指定できる
-    #Fc_at_age_year <- -1:-3
+    #Fcurrent_year_MSY <- -1:-3
 }
 #---- 上で4を選んだ場合:選択率参照年とFcurrent参照年を分ける
 if(select_Fcurrent_MSY==4){
@@ -74,8 +75,6 @@ if(select_Fcurrent_MSY==4){
 }
 
 #---- Rのスクリプトを含むメモを追加する場合は、以下のようにif(0){}で囲った範囲でメモする。
-#---- 以下、スケトウ日本海の場合はvpa$Fc.at.ageは2013:2017の単純平均=>選択率計算に利用
-#---- MSY計算用として与えるFc_at_ageは2015:2017年の平均F at ageの平均値と上記のF at ageの平均値の比
 if(0){
     round(rowMeans(res_vpa_MSY$faa[as.character(2013:2017)]),4)==round(res_vpa_MSY$Fc.at.age,4)
     # 2015-2017のF at ageの平均/
@@ -135,17 +134,18 @@ if(select_M_in_MSY==2){ # 2の場合にはこちらを設定。年毎に異る�
 #---  バイアス補正（シミュレーションの平均と決定論的予測が一致するようにする）(1:する(デフォルト)、1以外: しない)
 bias_correction_MSY <- 1
 #--- 加入変動の誤差分布(1: 対数正規誤差, 2: 残差リサンプリング)
+#---- 残差の分布がモデル診断の結果表示されるので、その分布を見て正規分布に近ければ1を選んで問題ないです。あからさまに変な分布だったら残差リサンプリングも検討してみてください。
 SR_error_MSY <- 1
 #---- SR_error_MSY=1（対数正規分布の誤差）の場合の設定
 if(SR_error_MSY==1){ # 対数正規分布の場合は自己相関のオプションも選ぶ
     #--- 自己相関の仮定 (-1: 推定結果どおりに設定する, 0: 推定結果にかかわらず自己相関を「なし」にする,
-    #---               0以上の数字：推定結果にかかわらず自己相関係数をここで設定した値にする)
+    #---               0-1の数字：推定結果にかかわらず自己相関係数rhoをここで設定した値にする.マイナス値はどうなるかよくわからないので入れないでください)
     select_AR_MSY <- -1
 }
 #---- SR_error_MSY=2（リサンプリング誤差）の場合の設定
 if(SR_error_MSY==2){
     #--- リサンプリングの年の範囲(0: 全年, それ以外の数字: 指定した加入年の残差のみリサンプリング）
-    select_resample_year <- 0 # or 1990:2000
+    select_resample_year <- 0 # or 1990:2000 (バイアス補正は全年の残差を使っていたかどうか？確認する。)
 }
 
 #-- MSY推定時の設定
@@ -158,8 +158,8 @@ only_lowerPGY <- 1
 #--- 管理基準値を計算するB0レベル（-1: 計算しない, 0から1までの数字のベクトル: B0x割合に対応する親魚レベル）
 select_B0 <- c(0.2)
 #--- 特定の親魚量レベルを直接指定する（-1: 計算しない, 親魚量のベクトル: その親魚量に維持するときの管理基準値）
-# 過去最低の親魚資源量をvpaの結果から持ってくる(#########オプション検討##########)
-select_Babs <- 12200 # 
+# 過去最低の親魚資源量をvpaの結果から持ってくる
+select_Babs <- c(12200, 20000) # 
 #--- 平衡状態にあると仮定する年の決め方（1: 世代時間から計算する, 2: 具体的な年数を与える）
 select_nyear_MSY <- 1
 #---- 世代時間から計算する場合
@@ -175,7 +175,7 @@ if(select_nyear_MSY==2){
 }
 #--- 複数シミュレーションの結果をあわせて漁獲量を最大化するときの統計量(算定ルールでは1（平均）を使うことになっている) (1: 平均（デフォルト）, 2: 中央値)
 stat_maximize <- 1
-#--- 自己相関を考慮した管理基準値を計算するか (0:しない, 1:する)
+#--- 自己相関を考慮した管理基準値を計算するか (0:しない[自己相関を考えていてもここは「しない」でOK], 1:する) # 1は廃止予定
 calc_RP_with_AR <- 0
 #---- 自己相関を考慮した管理基準値を計算する場合(ARありの場合だけ有効)
 if(calc_RP_with_AR==1){
@@ -189,7 +189,7 @@ if(calc_RP_with_AR==1){
 #--- 目標管理基準値の選択 (0: MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
-select_Btarget <- 0
+select_Btarget <- -1 # 負の数字の場合にエラーが出るので修正
 #--- 限界管理基準値の選択 (0: 60%MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
@@ -197,8 +197,7 @@ select_Blimit  <- 0
 #--- 禁漁水準の選択      (0: 10%MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
-select_Bban  <- 0
-
+select_Bban  <- 7
 
 ####################################################
 ### 以下は基本的には編集しないこと
@@ -632,15 +631,16 @@ refs.plot <- dplyr::filter(res_MSY$summary,RP.definition%in%c("Btarget0","Blimit
 SPR.history <- get.SPR(res_vpa_MSY,
                        target.SPR=SPR_MSY0*100,
                        max.age=Inf,Fmax=1)$ysdata
-Fratio <- SPR.history$"F/Ftarget"
-Bratio <- colSums(res_vpa_MSY$ssb)/derive_RP_value(res_MSY$summary,"Btarget0")$SSB
+kobe.ratio <- tibble(year=colnames(res_vpa_MSY$ssb),
+                     Fratio=SPR.history$"F/Ftarget",
+                     Bratio=colSums(res_vpa_MSY$ssb)/
+                         derive_RP_value(res_MSY$summary,"Btarget0")$SSB) %>%
+    dplyr::filter(!is.na(Bratio))
 
 cat("## --------------------------------------------------------\n")
 cat("## Historical F/Fmsy & B/Bmsy values ------------\n")
 cat("## --------------------------------------------------------\n")
-kobe.ratio <- tibble(Bratio=Bratio,Fratio=Fratio) %>%
-    mutate(Bratio=round(Bratio,2),Fratio=round(Fratio,2)) %>%
-    print()
+kobe.ratio %>% print()
 cat("## --------------------------------------------------------\n")
 
 g3_kobe4 <- plot_kobe_gg(res_vpa_MSY,
@@ -652,7 +652,7 @@ g3_kobe4 <- plot_kobe_gg(res_vpa_MSY,
                            refs.color=c(1,1,1),
                            yscale=1.2, # y軸を最大値の何倍まで表示するか。ラベルの重なり具合を見ながら調整してください
                            HCR.label.position=c(1,1),# HCRの説明を書くラベルの位置。相対値なので位置を見ながら調整してください。
-                         ylab.type="F",Fratio=Fratio)+theme_SH()
+                         ylab.type="F",Fratio=kobe.ratio$Fratio)+theme_SH()
 }
 
 if(do_MSY_estimation==1){
