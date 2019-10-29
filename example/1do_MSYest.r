@@ -41,13 +41,18 @@ if(do_diagnostics==1){
     diagnostic_file <- "diagnostic.pdf"
     # ブートストラップ推定する場合のブートストラップ回数
     n_boot_SR <- 10
-   
+    # 尤度プロファイルをする場合のグリッド数
+    profile_n_grid <- 100
+    # 尤度プロファイルをする場合のパラメータaの範囲(c(0.5,1.5)だと、0.5*a〜1.5*aの範囲で尤度プロファイルをします )
+    profile_a_range <- c(0.5,1.5)
+    # 尤度プロファイルをする場合のパラメータbの範囲(c(1,1)だと、1*min(ssb)〜1*max(ssb)の範囲で尤度プロファイルをします )
+    profile_b_range <- c(1,1)
 }
 
 #-- 3) MSY推定の設定（F一定の条件下での将来予測をもとにする） ----
 #--- 3-1) 選択率などの設定　---- 
 #--- MSY推定をするかどうか（1: する, 0: しない）
-do_MSY_estimation <- 1
+do_MSY_estimation <- 0
 #--- MSY推定で用いる選択率（近年の選択率がそのまま将来も受け継がれるという仮定）
 #---   (1: vpaの結果の中のFc.at.ageをそのまま使う; ややこしいので廃止予定)
 #---   2: 手動でFcurrentを設定する
@@ -252,8 +257,10 @@ cat("## --------------------------------------------------------\n")
 
 # 2-1) 再生産関係のdiagnosticをする場合
 if(do_diagnostics==1){
+    
     pdf(diagnostic_file)
-    par(mfrow=c(2,2),mar=c(4,4,3,2))    
+    par(mfrow=c(2,2),mar=c(4,4,3,2))
+    
     # 正規性のチェック
     check1 <- shapiro.test(res_SR_MSY$resid)
     check2 <- ks.test(res_SR_MSY$resid,y="pnorm")
@@ -346,6 +353,28 @@ if(do_diagnostics==1){
              xlab="Removed year",ylab="",main="rho in jackknife",pch=19)
         abline(res_SR_MSY$pars$rho,0,lwd=3,col=2)
     }
+
+    # 尤度プロファイル
+    a.grid <- seq(res_SR_MSY$pars$a*profile_a_range[1],res_SR_MSY$pars$a*profile_a_range[2],length=profile_n_grid)
+    b.grid <- seq(min(data_SR$SSB)*profile_a_range[1],
+                  max(data_SR$SSB)*profile_a_range[2],length=profile_n_grid)
+    ba.grids <- expand.grid(b.grid,a.grid)
+    prof.lik.res <- sapply(1:nrow(ba.grids),function(i) prof.lik(res_SR_MSY,a=as.numeric(ba.grids[i,2]),b=as.numeric(ba.grids[i,1])))
+
+    image(b.grid,a.grid,matrix(prof.lik.res,nrow=profile_n_grid),ann=F,col=cm.colors(12),
+          ylim=c(res_SR_MSY$pars$a*0.5,res_SR_MSY$pars$a*1.5),xlim=c(min(data_SR$SSB),max(data_SR$SSB)))
+    par(new=T, xaxs="i",yaxs="i")
+    contour(b.grid,a.grid,matrix(prof.lik.res,nrow=profile_n_grid),
+            ylim=c(res_SR_MSY$pars$a*0.5,res_SR_MSY$pars$a*1.5),xlim=c(min(data_SR$SSB),max(data_SR$SSB)),
+            xlab="b",ylab="a",main="Profile likelihood")
+    for(i in 1:length(jack.res)) points(jack.res[[i]]$pars$b,jack.res[[i]]$pars$a,lwd=1,col=1)
+
+    lines(y=as.numeric(quantile(sapply(1:length(boot.res),function(i)boot.res[[i]]$pars$a),c(0.1,0.9))),
+          x=rep(res_SR_MSY$pars$b,2),col=4,lwd=2)
+    lines(x=as.numeric(quantile(sapply(1:length(boot.res),function(i)boot.res[[i]]$pars$b),c(0.1,0.9))),
+          y=rep(res_SR_MSY$pars$a,2),col=4,lwd=2)
+    legend("bottomleft",c("Bootstrap CI(0.8)","Jackknife"),lty=1:0,pch=c("",1),col=c(4,1),lwd=2:1)
+
     dev.off()
 }
 
