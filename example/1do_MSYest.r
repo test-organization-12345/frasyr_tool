@@ -204,7 +204,7 @@ if(calc_RP_with_AR==1){
 #--- 目標管理基準値の選択 (0: MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
-select_Btarget <- -1 # 負の数字の場合にエラーが出るので修正
+select_Btarget <- 0 #
 #--- 限界管理基準値の選択 (0: 60%MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
@@ -212,14 +212,14 @@ select_Blimit  <- 0
 #--- 禁漁水準の選択      (0: 10%MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
-select_Bban  <- 7
+select_Bban  <- 0
 
 ####################################################
 ### 以下は基本的には編集しないこと
 ####################################################
 old.warning <- options()$warn
 options(warn=warning_option)
-options(tibble.width=100)
+options(tibble.width=Inf)
 
 # 1) VPA結果の読み込み
 if(vpa_file_type_MSY==1){
