@@ -350,9 +350,9 @@ if(do_diagnostics==1){
 }
 
 # 3) MSY推定のための将来予測の設定
+vpa_years <- colnames(res_vpa_MSY$naa)
 future_MSY_year <- vpa_years[apply(res_vpa_MSY$input$dat$caa,2,sum)>0] %>%
     as.numeric() %>% max()
-vpa_years <- colnames(res_vpa_MSY$naa)
 
 if(SR_error_MSY==1){# lognormal
     if(res_SR_MSY$input$SR=="HS") SRfun_MSY <- HS.recAR
