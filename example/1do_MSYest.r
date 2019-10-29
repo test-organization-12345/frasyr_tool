@@ -10,8 +10,6 @@ vpa_file_type_MSY <- 1
 #-- 1-2) 出力ファイル ----
 #--- MSY推定で仮定する再生産関係の推定結果を保存するファイルの名前
 SR_file_path_MSY <- "res_SR_HSL2.rda"
-#--- AICを網羅的に検討する場合にその結果を保存するファイルの名前(csvファイル)
-SR_compared_file_path <- "model_selection.csv"
 #--- MSY推定結果を保存するファイルの名前
 MSY_file_path <- "res_MSY_HSL2.rda"
 #--- グラフのファイル名
@@ -49,6 +47,12 @@ if(do_diagnostics==1){
     profile_a_range <- c(0.5,1.5)
     # 尤度プロファイルをする場合のパラメータbの範囲(c(1,1)だと、1*min(ssb)〜1*max(ssb)の範囲で尤度プロファイルをします )
     profile_b_range <- c(1,1)
+}
+#--- 再生産関係を網羅的にフィットしてその結果を表にするかどうか(0: しない, 1: する(時間がちょっとかかります))
+make_SRmodel_table <- 1
+if(make_SRmodel_table==1){
+    #--- AICを網羅的に検討したその結果を保存するファイルの名前(csvファイル)
+    SR_compared_file_path <- "model_selection.csv"
 }
 
 #-- 3) MSY推定の設定（F一定の条件下での将来予測をもとにする） ----
@@ -247,44 +251,44 @@ res_SR_MSY <- fit.SR(data_SR,
                                  "Set appropriate number (1-2) in AR_estimation"),
                 hessian = FALSE)
 
-#-- 網羅的なパラメータ推定もやる
-select_type <- ifelse(res_SR_MSY$input$AR==0,"non",
-               ifelse(res_SR_MSY$input$out.AR==TRUE,"outer","inner"))
+if(make_SRmodel_table==1){
+    #-- 網羅的なパラメータ推定もやる
+    select_type <- ifelse(res_SR_MSY$input$AR==0,"non",
+                   ifelse(res_SR_MSY$input$out.AR==TRUE,"outer","inner"))
 
-SRmodel.list <- expand.grid(SR.rel = c("HS","BH","RI"), L.type = c("L1", "L2")) %>%
-    as_tibble() 
+    SRmodel.list <- expand.grid(SR.rel = c("HS","BH","RI"), L.type = c("L1", "L2")) %>%
+        as_tibble() 
 
-SRmodel.list$pars <- purrr::map2(SRmodel.list$SR.rel, SRmodel.list$L.type,
-                            function(x,y){
-                res1 <- unlist(fit.SR(data_SR, SR = x, method = y, 
-                                      AR = 0, hessian = FALSE, out.AR=TRUE)[c("pars","AICc")])
-                tmp <- fit.SR(data_SR, SR = x, method = y, 
-                                      AR = 1, hessian = FALSE, out.AR=TRUE)
-                res2 <- unlist(tmp[c("pars","AICc")])
-                res2 <- c(res2,"deltaAIC(AIC_AR-AIC_noAR)"=tmp$AIC.ar[2]-tmp$AIC.ar[1])
-                res3 <- unlist(fit.SR(data_SR, SR = x, method = y, 
-                                      AR = 1, hessian = FALSE, out.AR=FALSE)[c("pars","AICc")])
-                bind_rows(res1,res2,res3,.id="id")
-                            })
+    SRmodel.list$pars <- purrr::map2(SRmodel.list$SR.rel, SRmodel.list$L.type,
+                                     function(x,y){
+                                         res1 <- unlist(fit.SR(data_SR, SR = x, method = y, 
+                                                               AR = 0, hessian = FALSE, out.AR=TRUE)[c("pars","AICc")])
+                                         tmp <- fit.SR(data_SR, SR = x, method = y, 
+                                                       AR = 1, hessian = FALSE, out.AR=TRUE)
+                                         res2 <- unlist(tmp[c("pars","AICc")])
+                                         res2 <- c(res2,"deltaAIC(AIC_AR-AIC_noAR)"=tmp$AIC.ar[2]-tmp$AIC.ar[1])
+                                         res3 <- unlist(fit.SR(data_SR, SR = x, method = y, 
+                                                               AR = 1, hessian = FALSE, out.AR=FALSE)[c("pars","AICc")])
+                                         bind_rows(res1,res2,res3,.id="id")
+                                     })
 
-SRmodel.list <- SRmodel.list %>%
-    unnest() %>%
-    left_join(tibble(id=as.character(1:3),AR.type=c("non","outer","inner"))) %>%
-    arrange(AICc,AR.type) %>%
-    mutate(selection=ifelse(L.type==res_SR_MSY$input$method &
-                            SR.rel==res_SR_MSY$input$SR &
-                            AR.type==select_type,"selected",0))%>%
-    select(-id)
+    SRmodel.list <- SRmodel.list %>%
+        unnest() %>%
+        left_join(tibble(id=as.character(1:3),AR.type=c("non","outer","inner"))) %>%
+        arrange(AICc,AR.type) %>%
+        mutate(selection=ifelse(L.type==res_SR_MSY$input$method &
+                                SR.rel==res_SR_MSY$input$SR &
+                                AR.type==select_type,"selected",0))%>%
+        select(-id)
 
-## print results of SR fit
-cat("## --------------------------------------------------------\n")
-cat("## print estimated SR parameters\n")
-cat("## --------------------------------------------------------\n")
-print(SRmodel.list)
-write_csv(SRmodel.list,path=SR_compared_file_path)
-cat("## --------------------------------------------------------\n")
-
-#-- 
+    ## print results of SR fit
+    cat("## --------------------------------------------------------\n")
+    cat("## print estimated SR parameters\n")
+    cat("## --------------------------------------------------------\n")
+    print(SRmodel.list)
+    write_csv(SRmodel.list,path=SR_compared_file_path)
+    cat("## --------------------------------------------------------\n")
+}
 
 ## print results of SR fit
 cat("## --------------------------------------------------------\n")
