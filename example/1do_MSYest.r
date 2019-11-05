@@ -193,7 +193,7 @@ if(calc_RP_with_AR==1){
 #--- 目標管理基準値の選択 (0: MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
-select_Btarget <- -1 # 負の数字の場合にエラーが出るので修正
+select_Btarget <- 0 # 負の数字の場合にエラーが出るので修正
 #--- 限界管理基準値の選択 (0: 60%MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
@@ -201,7 +201,7 @@ select_Blimit  <- 0
 #--- 禁漁水準の選択      (0: 10%MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
-select_Bban  <- 7
+select_Bban  <- 0
 
 ####################################################
 ### 以下は基本的には編集しないこと
@@ -350,9 +350,9 @@ if(do_diagnostics==1){
 }
 
 # 3) MSY推定のための将来予測の設定
+vpa_years <- colnames(res_vpa_MSY$naa)
 future_MSY_year <- vpa_years[apply(res_vpa_MSY$input$dat$caa,2,sum)>0] %>%
     as.numeric() %>% max()
-vpa_years <- colnames(res_vpa_MSY$naa)
 
 if(SR_error_MSY==1){# lognormal
     if(res_SR_MSY$input$SR=="HS") SRfun_MSY <- HS.recAR
@@ -675,7 +675,9 @@ out.vpa(res=res_vpa_MSY,
         kobeII=NULL,filename=NULL,
         csvname=csv_file_MSY,pdfname=pdf_file_MSY)
 
-
+write("\n# Kobe ratio",file=csv_file_MSY,append=T)    
+kobe.ratio %>%
+    write_csv(path=csv_file_MSY,append=T, col_names=TRUE)                   
 
 options(warn=old.warning)
 options(tibble.width=NULL)
