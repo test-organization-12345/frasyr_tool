@@ -1,4 +1,3 @@
-
 WIKIに，バグ相談，エラー報告のやり方を解説しました．問題あったかたはまずこちらをご一読し，その後，issueかチームスかどちらかに質問を投げてください． https://github.com/ichimomo/frasyr_tool/wiki/%E3%83%90%E3%82%B0%E5%A0%B1%E5%91%8A%E3%83%BB%E3%82%A8%E3%83%A9%E3%83%BC%E7%9B%B8%E8%AB%87%E3%81%AE%E3%82%84%E3%82%8A%E3%81%8B%E3%81%9F
 
 ## ユーティリティファイルの使い方
@@ -68,3 +67,18 @@ source("1do_MSYest-BH.r") # MSY管理基準値の計算(SRの設定をBHにす�
 source("2do_future_projection-BH.r") # 上で作成したファイルをもとに将来予測するように設定しておく
 
 ```
+
+## 実際に自分の魚種の資源評価をおこなう場合
+- VPA結果をcsv出力したものか，Rオブジェクトにしたものを用意し，それをexampleフォルダのres_vpa.csvやres_vpa.rdaなどと置き換えてください．または設定ファイルの読み込みファイル名を魚種にあわせて指定してください．
+- VPAの実行のしかたはfrasyrのマニュアル　https://ichimomo.github.io/frasyr/doc/vpa.html　にあります
+- vpa結果をcsvファイルにする場合
+```
+out.vpa(vpaのオブジェクト, file="ファイル名”)
+```
+
+- Rのオブジェクトにする場合
+```
+save(vpaのオブジェクト, file="ファイル名")
+```
+
+
