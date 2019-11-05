@@ -21,8 +21,8 @@ if(use_new_vpa_res==1){
 #---- res_future_current; Fcurrentでの将来予測の結果
 #---- kobeII.table      ; kobe II matrixの表
 future_file_path <- "res_futures0.rda"
-#--- グラフのファイル名
-graph_file_future <- "future_graph0.png"
+#--- グラフのファイル名 (拡張子をpngにすると画像ファイルで、pdfにするとPDFファイルで出力されます)
+graph_file_future <- "future_graph0.pdf"
 #--- 結果をcsvファイルで出力するときのファイル名　# <- 出力が変（colnameが出てない)
 csv_file_future <- "future0.csv"
 #--- 結果の簡単なグラフをpdfファイルで出力するときのファイル名(まだちゃんとした結果は出ないです)
@@ -37,7 +37,7 @@ is_pope <- 1
 #--- 乱数のシード
 future_seed <- 1
 #--- MSY計算時のシミュレーション回数(1000回以上推奨)
-future_nsim <- 1000
+future_nsim <- 100
 #--- 計算した結果の簡単な図を示す（1:示す,1以外:しない）
 future_est_plot <- 1
 
@@ -96,7 +96,7 @@ if(select_M_in_future==2){ # 2の場合にはこちらを設定。年毎に異�
 }
 
 #--- 特定の年の生物パラメータを別のものに置き換える場合(0: 置き換えない, 1: 置き換える)
-set_specific_biopara <- 1
+set_specific_biopara <- 0
 if(set_specific_biopara==1){ # 1の場合、以下の変数を設定する
     # 特に置き換えが必要ないものにはNULLを入れる
     # 置き換えたい場合は、tibble("年"=その年の年齢別パラメータ)のように入れる
@@ -113,7 +113,7 @@ if(set_specific_biopara==1){ # 1の場合、以下の変数を設定する
 #-- 3) 再生産関係の設定 ----
 #--- MSY計算とすべて同じ仮定を使うか (1: 使う, 0: 使わずすべて手動で設定する)
 #--- クロスチェック（再生産関係Aを前提とした管理基準値のもとで、再生産関係が実はBだった場合のシミュレーション）などをする場合に使う
-use_MSY_SR <- 0
+use_MSY_SR <- 1
 if(use_MSY_SR==0){ # すべて手動で計算する場合、以下のオプションを設定
     #--- 将来予測で仮定する再生産関係の推定結果が保存されているファイルの名前
     SR_file_path <- "res_SR_HSL2.rda"    
@@ -232,7 +232,7 @@ beta_table <- c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1)
 #---   1: Fmsy at age (=MSY_resで"Btarget0"の管理基準値に対応するF at age)
 #---   2: 手動でFcurrentを設定する
 #---   3: vpaのF at ageに対して年を指定し、その平均を使う,
-#---   4: 選択率を参照する年と漁獲圧を参照する年を別にする（漁獲圧はSPR換算して、指定された選択率において同じ漁獲圧になるようなFcurrentを用いる。SPR換算するときの生物パラメータは、漁獲圧として指定された年の生物パラメータの平均とする））
+#---   4: 選択率を参照する年と漁獲圧を参照する年を別にする（漁獲圧はSPR換算して、指定された選択率においてx同じ漁獲圧になるようなFcurrentを用いる。SPR換算するときの生物パラメータは、漁獲圧として指定された年の生物パラメータの平均とする））
 #---   5??: 漁獲圧はFmsyを使うが、別の選択率を用いる（漁獲圧はSPR換算して、Fmsyと漁獲圧になるようなFcurrentを計算する。SPR換算するときの生物パラメータは、MSY推定に用いた生物パラメータの平均とする）
 #--- 6: 選択率はFmsyを使うが、漁獲圧はなんか別のものを使う？？
 select_FAA_preABC <- 3
@@ -327,7 +327,10 @@ year_ssbmax_prob    <- c(2019:2030,2040,2050)
 year_catch_aav      <- c(2019:2030,2040,2050)
 #--- Fの削減率の平均
 year_Fsakugen_mean  <- c(2019:2030,2040,2050)
-
+#--- Kobe plotで管理基準値にラベルをつけるか？(0: つけない, 1:つける)
+put_label_kobe <- 1
+#--- ラベルをつける場合、Bban, Blimit, Btargetのラベルを指定
+label_name_kobe <- c("禁漁水準","限界管理基準値","目標管理基準値")
 
 ####################################################
 ### 以下は基本的には編集しないこと
@@ -791,16 +794,24 @@ cat("## --------------------------------------------------------\n")
 kobe.ratio %>% print()
 cat("## --------------------------------------------------------\n")
 
-g3_kobe4 <- plot_kobe_gg(res_vpa_update,
+is_HCR <- tibble(beta=c(beta_default,-1,-1),yaxis=c("F","F","U"))
+if(put_label_kobe==0) label_name_kobe <- c("","","") 
+
+g3_kobe4 <- list()
+for(i in 1:nrow(is_HCR)){
+    g3_kobe4[[i]] <- plot_kobe_gg(res_vpa_update,
                            refs_base=res_MSY$summary,
                            roll_mean=1,category=4,
                            Btarget="Btarget0",
                            Blow="Btarget0",                           
-                           beta=0.8, # 推奨されるβに変える
+                           beta={if(is_HCR[i,1]<0) NULL else as.numeric(is_HCR[i,1])}, 
                            refs.color=c(1,1,1),
                            yscale=1.2, # y軸を最大値の何倍まで表示するか。ラベルの重なり具合を見ながら調整してください
                            HCR.label.position=c(1,1),# HCRの説明を書くラベルの位置。相対値なので位置を見ながら調整してください。
-                         ylab.type="F",Fratio=kobe.ratio$Fratio)+theme_SH()
+                           RP.label=label_name_kobe,
+                           ylab.type=is_HCR[i,2],
+                           Fratio=kobe.ratio$Fratio)+theme_SH()
+}
 
 # plot future projection
 (g4_future <- plot_futures(res_vpa_update, #vpaの結果
@@ -825,8 +836,13 @@ g3_kobe4 <- plot_kobe_gg(res_vpa_update,
 )
 #ggsave_SH_large("g4_future.png",g4_future)
 
-graph_all2 <- gridExtra::grid.arrange(g3_kobe4,g4_future)
-ggsave(graph_file_future,graph_all2)
+graph_all2 <- gridExtra::grid.arrange(g3_kobe4[[1]],g3_kobe4[[2]],g3_kobe4[[3]],
+                                      g4_future)
+#ggsave(graph_file_future,graph_all2)
+ggsave_SH(str_c("future_",graph_file_future), g4_future)
+ggsave_SH(str_c("kobe1_",graph_file_future), g3_kobe4[[1]])
+ggsave_SH(str_c("kobe2_",graph_file_future), g3_kobe4[[2]])
+ggsave_SH(str_c("kobe3_",graph_file_future), g3_kobe4[[3]])
 
 out.vpa(res=res_vpa_update,
         msyres=res_MSY,
@@ -835,6 +851,10 @@ out.vpa(res=res_vpa_update,
         kobeII=kobeII.table,
         filename=NULL,
         csvname=csv_file_future,pdfname=pdf_file_future)
+
+write("\n# Kobe ratio",file=csv_file_future,append=T)    
+kobe.ratio %>%
+    write_csv(path=csv_file_future,append=T, col_names=TRUE)
 
 options(warn=old.warning)
 options(tibble.width=NULL,tibble.print_max=20)

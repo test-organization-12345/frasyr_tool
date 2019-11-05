@@ -204,7 +204,8 @@ if(calc_RP_with_AR==1){
 #--- 目標管理基準値の選択 (0: MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
-select_Btarget <- 0 #
+
+select_Btarget <- 0 # 負の数字の場合にエラーが出るので修正
 #--- 限界管理基準値の選択 (0: 60%MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
@@ -749,7 +750,9 @@ out.vpa(res=res_vpa_MSY,
         kobeII=NULL,filename=NULL,
         csvname=csv_file_MSY,pdfname=pdf_file_MSY)
 
-
+write("\n# Kobe ratio",file=csv_file_MSY,append=T)    
+kobe.ratio %>%
+    write_csv(path=csv_file_MSY,append=T, col_names=TRUE)                   
 
 options(warn=old.warning)
 options(tibble.width=NULL)
