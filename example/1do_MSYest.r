@@ -41,7 +41,18 @@ if(do_diagnostics==1){
     diagnostic_file <- "diagnostic.pdf"
     # ブートストラップ推定する場合のブートストラップ回数
     n_boot_SR <- 10
-   
+    # 尤度プロファイルをする場合のグリッド数
+    profile_n_grid <- 100
+    # 尤度プロファイルをする場合のパラメータaの範囲(c(0.5,1.5)だと、0.5*a〜1.5*aの範囲で尤度プロファイルをします )
+    profile_a_range <- c(0.5,1.5)
+    # 尤度プロファイルをする場合のパラメータbの範囲(c(1,1)だと、1*min(ssb)〜1*max(ssb)の範囲で尤度プロファイルをします )
+    profile_b_range <- c(1,1)
+}
+#--- 再生産関係を網羅的にフィットしてその結果を表にするかどうか(0: しない, 1: する(時間がちょっとかかります))
+make_SRmodel_table <- 1
+if(make_SRmodel_table==1){
+    #--- AICを網羅的に検討したその結果を保存するファイルの名前(csvファイル)
+    SR_compared_file_path <- "model_selection.csv"
 }
 
 #-- 3) MSY推定の設定（F一定の条件下での将来予測をもとにする） ----
@@ -92,7 +103,7 @@ is_pope <- 1
 #--- 乱数のシード
 MSY_seed <- 1
 #--- MSY計算時のシミュレーション回数(1000回以上推奨)
-MSY_nsim <- 10
+MSY_nsim <- 1000
 #--- 計算した結果の簡単な図を示す（1:示す,1以外:しない）
 MSY_est_plot <- 1
 
@@ -193,6 +204,7 @@ if(calc_RP_with_AR==1){
 #--- 目標管理基準値の選択 (0: MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
 #---                   負の数字: インタラクティブに決定)
+
 select_Btarget <- 0 # 負の数字の場合にエラーが出るので修正
 #--- 限界管理基準値の選択 (0: 60%MSY,
 #---                   1以上の数字: MSY_res$summaryの行数,
@@ -208,7 +220,7 @@ select_Bban  <- 0
 ####################################################
 old.warning <- options()$warn
 options(warn=warning_option)
-options(tibble.width=100)
+options(tibble.width=Inf)
 
 # 1) VPA結果の読み込み
 if(vpa_file_type_MSY==1){
@@ -240,6 +252,45 @@ res_SR_MSY <- fit.SR(data_SR,
                                  "Set appropriate number (1-2) in AR_estimation"),
                 hessian = FALSE)
 
+if(make_SRmodel_table==1){
+    #-- 網羅的なパラメータ推定もやる
+    select_type <- ifelse(res_SR_MSY$input$AR==0,"non",
+                   ifelse(res_SR_MSY$input$out.AR==TRUE,"outer","inner"))
+
+    SRmodel.list <- expand.grid(SR.rel = c("HS","BH","RI"), L.type = c("L1", "L2")) %>%
+        as_tibble() 
+
+    SRmodel.list$pars <- purrr::map2(SRmodel.list$SR.rel, SRmodel.list$L.type,
+                                     function(x,y){
+                                         res1 <- unlist(fit.SR(data_SR, SR = x, method = y, 
+                                                               AR = 0, hessian = FALSE, out.AR=TRUE)[c("pars","AICc")])
+                                         tmp <- fit.SR(data_SR, SR = x, method = y, 
+                                                       AR = 1, hessian = FALSE, out.AR=TRUE)
+                                         res2 <- unlist(tmp[c("pars","AICc")])
+                                         res2 <- c(res2,"deltaAIC(AIC_AR-AIC_noAR)"=tmp$AIC.ar[2]-tmp$AIC.ar[1])
+                                         res3 <- unlist(fit.SR(data_SR, SR = x, method = y, 
+                                                               AR = 1, hessian = FALSE, out.AR=FALSE)[c("pars","AICc")])
+                                         bind_rows(res1,res2,res3,.id="id")
+                                     })
+
+    SRmodel.list <- SRmodel.list %>%
+        unnest() %>%
+        left_join(tibble(id=as.character(1:3),AR.type=c("non","outer","inner"))) %>%
+        arrange(AICc,AR.type) %>%
+        mutate(selection=ifelse(L.type==res_SR_MSY$input$method &
+                                SR.rel==res_SR_MSY$input$SR &
+                                AR.type==select_type,"selected",0))%>%
+        select(-id)
+
+    ## print results of SR fit
+    cat("## --------------------------------------------------------\n")
+    cat("## print estimated SR parameters\n")
+    cat("## --------------------------------------------------------\n")
+    print(SRmodel.list)
+    write_csv(SRmodel.list,path=SR_compared_file_path)
+    cat("## --------------------------------------------------------\n")
+}
+
 ## print results of SR fit
 cat("## --------------------------------------------------------\n")
 cat("## print estimated SR parameters\n")
@@ -252,8 +303,10 @@ cat("## --------------------------------------------------------\n")
 
 # 2-1) 再生産関係のdiagnosticをする場合
 if(do_diagnostics==1){
+    
     pdf(diagnostic_file)
-    par(mfrow=c(2,2),mar=c(4,4,3,2))    
+    par(mfrow=c(2,2),mar=c(4,4,3,2))
+    
     # 正規性のチェック
     check1 <- shapiro.test(res_SR_MSY$resid)
     check2 <- ks.test(res_SR_MSY$resid,y="pnorm")
@@ -346,6 +399,28 @@ if(do_diagnostics==1){
              xlab="Removed year",ylab="",main="rho in jackknife",pch=19)
         abline(res_SR_MSY$pars$rho,0,lwd=3,col=2)
     }
+
+    # 尤度プロファイル
+    a.grid <- seq(res_SR_MSY$pars$a*profile_a_range[1],res_SR_MSY$pars$a*profile_a_range[2],length=profile_n_grid)
+    b.grid <- seq(min(data_SR$SSB)*profile_a_range[1],
+                  max(data_SR$SSB)*profile_a_range[2],length=profile_n_grid)
+    ba.grids <- expand.grid(b.grid,a.grid)
+    prof.lik.res <- sapply(1:nrow(ba.grids),function(i) prof.lik(res_SR_MSY,a=as.numeric(ba.grids[i,2]),b=as.numeric(ba.grids[i,1])))
+
+    image(b.grid,a.grid,matrix(prof.lik.res,nrow=profile_n_grid),ann=F,col=cm.colors(12),
+          ylim=c(res_SR_MSY$pars$a*0.5,res_SR_MSY$pars$a*1.5),xlim=c(min(data_SR$SSB),max(data_SR$SSB)))
+    par(new=T, xaxs="i",yaxs="i")
+    contour(b.grid,a.grid,matrix(prof.lik.res,nrow=profile_n_grid),
+            ylim=c(res_SR_MSY$pars$a*0.5,res_SR_MSY$pars$a*1.5),xlim=c(min(data_SR$SSB),max(data_SR$SSB)),
+            xlab="b",ylab="a",main="Profile likelihood")
+    for(i in 1:length(jack.res)) points(jack.res[[i]]$pars$b,jack.res[[i]]$pars$a,lwd=1,col=1)
+
+    lines(y=as.numeric(quantile(sapply(1:length(boot.res),function(i)boot.res[[i]]$pars$a),c(0.1,0.9))),
+          x=rep(res_SR_MSY$pars$b,2),col=4,lwd=2)
+    lines(x=as.numeric(quantile(sapply(1:length(boot.res),function(i)boot.res[[i]]$pars$b),c(0.1,0.9))),
+          y=rep(res_SR_MSY$pars$a,2),col=4,lwd=2)
+    legend("bottomleft",c("Bootstrap CI(0.8)","Jackknife"),lty=1:0,pch=c("",1),col=c(4,1),lwd=2:1)
+
     dev.off()
 }
 
